@@ -1,4 +1,4 @@
-# Sistema de Gestión de Socios — Sociedad Italiana de Goya (TFI)
+# Sistema de Gestión de Socios (TFI)
 
 Backend Django + MySQL, frontend con plantillas HTML5, Bootstrap 5 (CDN) y JavaScript básico.
 
