@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}{{ socio.nombre_completo }}{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{% url 'socios:socio_list' %}">Socios</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ socio.nombre_completo }}</li>
+  </ol>
+</nav>
+
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start">
+          <h1 class="h5 mb-1">{{ socio.nombre }} {{ socio.apellido }}</h1>
+          {% if socio.esta_activo %}<span class="badge text-bg-success">Activo</span>{% else %}<span class="badge text-bg-secondary">Inactivo</span>{% endif %}
+        </div>
+        <p class="text-muted">{{ socio.categoria.nombre }} · ${{ socio.categoria.monto_cuota|floatformat:2 }}/mes</p>
+        <dl class="row small mb-3">
+          <dt class="col-5">DNI</dt><dd class="col-7">{{ socio.dni }}</dd>
+          <dt class="col-5">Nacimiento</dt><dd class="col-7">{{ socio.fecha_nacimiento|date:"d/m/Y" }} ({{ socio.edad }} años)</dd>
+          <dt class="col-5">Email</dt><dd class="col-7">{{ socio.email|default:"—" }}</dd>
+          <dt class="col-5">Teléfono</dt><dd class="col-7">{{ socio.telefono|default:"—" }}</dd>
+          <dt class="col-5">Dirección</dt><dd class="col-7">{{ socio.direccion|default:"—" }}</dd>
+          <dt class="col-5">Fecha de alta</dt><dd class="col-7">{{ socio.fecha_alta|date:"d/m/Y" }}</dd>
+        </dl>
+        <div class="d-flex flex-wrap gap-2">
+          <a href="{% url 'socios:socio_update' socio.pk %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil"></i> Editar</a>
+          {% if socio.esta_activo %}
+          <a href="{% url 'socios:cuota_create' %}?socio={{ socio.pk }}" class="btn btn-outline-success btn-sm"><i class="bi bi-plus-lg"></i> Nueva cuota</a>
+          <form method="post" action="{% url 'socios:socio_baja' socio.pk %}" data-confirm="¿Dar de baja a {{ socio.nombre_completo }}?">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-person-dash"></i> Dar de baja</button>
+          </form>
+          {% else %}
+          <form method="post" action="{% url 'socios:socio_reactivar' socio.pk %}" data-confirm="¿Reactivar a {{ socio.nombre_completo }}?">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-success btn-sm"><i class="bi bi-person-check"></i> Reactivar</button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="card shadow-sm">
+      <div class="card-header bg-white fw-semibold">Historial de cuotas</div>
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead class="table-light">
+            <tr><th>Período</th><th>Vence</th><th class="text-end">Monto</th><th>Estado</th><th class="text-end">Acción</th></tr>
+          </thead>
+          <tbody>
+            {% for c in cuotas %}
+            <tr>
+              <td>{{ c.periodo }}</td>
+              <td>{{ c.fecha_vencimiento|date:"d/m/Y" }}</td>
+              <td class="text-end">${{ c.monto|floatformat:2 }}</td>
+              <td>
+                {% if c.estado == 'PAGADA' %}<span class="badge text-bg-success">Pagada</span>
+                {% elif c.esta_vencida %}<span class="badge text-bg-danger">Vencida</span>
+                {% else %}<span class="badge text-bg-warning">Pendiente</span>{% endif %}
+              </td>
+              <td class="text-end">
+                {% if c.estado != 'PAGADA' %}
+                <a href="{% url 'socios:pago_registrar' c.pk %}" class="btn btn-sm btn-success"><i class="bi bi-cash"></i> Cobrar</a>
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="text-center text-muted py-4">Este socio todavía no tiene cuotas.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

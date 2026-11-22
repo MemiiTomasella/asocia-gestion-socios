@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}{{ titulo }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-9">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'socios:socio_list' %}">Socios</a></li>
+        <li class="breadcrumb-item active" aria-current="page">{{ titulo }}</li>
+      </ol>
+    </nav>
+
+    <div class="card shadow-sm">
+      <div class="card-header bg-white">
+        <h1 class="h4 mb-0">{{ titulo }}</h1>
+      </div>
+      <div class="card-body">
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+          {% for error in form.non_field_errors %}<div>{{ error }}</div>{% endfor %}
+        </div>
+        {% endif %}
+
+        <form method="post" novalidate>
+          {% csrf_token %}
+
+          <h2 class="h6 text-uppercase text-muted mb-3">Datos personales</h2>
+          <div class="row g-3 mb-4">
+            {% include "includes/field.html" with field=form.dni col="col-md-4" %}
+            {% include "includes/field.html" with field=form.apellido col="col-md-4" %}
+            {% include "includes/field.html" with field=form.nombre col="col-md-4" %}
+            {% include "includes/field.html" with field=form.fecha_nacimiento col="col-md-4" %}
+            {% include "includes/field.html" with field=form.email col="col-md-4" %}
+            {% include "includes/field.html" with field=form.telefono col="col-md-4" %}
+            {% include "includes/field.html" with field=form.direccion col="col-12" %}
+          </div>
+
+          <h2 class="h6 text-uppercase text-muted mb-3">Membresía</h2>
+          <div class="row g-3 mb-4">
+            {% include "includes/field.html" with field=form.categoria col="col-md-4" %}
+            {% include "includes/field.html" with field=form.fecha_alta col="col-md-4" %}
+            {% include "includes/field.html" with field=form.estado col="col-md-4" %}
+          </div>
+
+          <div class="d-flex justify-content-end gap-2">
+            <a href="{% url 'socios:socio_list' %}" class="btn btn-outline-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-success"><i class="bi bi-check-lg"></i> Guardar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

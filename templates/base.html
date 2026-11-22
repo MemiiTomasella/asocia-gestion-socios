@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Sociedad Italiana de Goya{% endblock %}</title>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Bootstrap 5 CSS -->
+     <script>
+  document.documentElement.setAttribute("data-bs-theme", localStorage.getItem("tema") || "light");
+</script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+    <style>
+        :root {
+            --sidebar-width: 260px;
+            --sidebar-width-collapsed: 80px;
+            --primary-color: #198754;
+            --bg-app: #f8fafc;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-app);
+            color: #334155;
+            overflow-x: hidden;
+        }
+
+        /* Menú Lateral Colapsable */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: var(--sidebar-width);
+            background: #ffffff;
+            border-right: 1px solid #e2e8f0;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            padding: 1.5rem 1rem;
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .sidebar-brand {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+            margin-bottom: 2rem;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        .sidebar-brand .logo-icon {
+            background: #dcfce7;
+            color: var(--primary-color);
+            width: 42px;
+            height: 42px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            flex-grow: 1;
+        }
+
+        .sidebar-menu li {
+            margin-bottom: 0.5rem;
+        }
+
+        .sidebar-menu a {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            color: #64748b;
+            text-decoration: none;
+            font-weight: 500;
+            border-radius: 10px;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        .sidebar-menu a i {
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .sidebar-menu a:hover, .sidebar-menu a.active {
+            background-color: #f1f5f9;
+            color: #0f172a;
+        }
+
+        .sidebar-menu a.active {
+            background-color: #dcfce7;
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        /* Contenido Principal */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Topbar */
+        .topbar {
+            height: 75px;
+            background: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+        }
+
+        /* Avatar redondo perfecto */
+        .user-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background-color: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #334155;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+
+        .content-body {
+            padding: 2rem;
+            flex-grow: 1;
+        }
+
+        /* Tarjetas UI */
+        .card-ui {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -2px rgba(0, 0, 0, 0.02);
+        }
+
+        .btn-ui-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            color: white;
+            border-radius: 10px;
+            padding: 0.6rem 1.2rem;
+            font-weight: 500;
+            box-shadow: 0 2px 4px rgba(25, 135, 84, 0.2);
+        }
+        
+        .btn-ui-primary:hover {
+            background-color: #157347;
+            border-color: #146c43;
+            color: white;
+        }
+
+        /* --- ESTADOS DE LA BARRA COLAPSADA --- */
+        body.sidebar-collapsed .sidebar {
+            width: var(--sidebar-width-collapsed);
+            padding: 1.5rem 0.6rem;
+        }
+
+        body.sidebar-collapsed .sidebar .sidebar-brand span,
+        body.sidebar-collapsed .sidebar .sidebar-menu span,
+        body.sidebar-collapsed .sidebar .sidebar-footer-text,
+        body.sidebar-collapsed .sidebar form button span {
+            display: none;
+        }
+
+        body.sidebar-collapsed .sidebar .sidebar-brand {
+            justify-content: center;
+            margin-bottom: 2rem;
+        }
+
+        body.sidebar-collapsed .sidebar .sidebar-menu a {
+            justify-content: center;
+            padding: 0.75rem;
+        }
+
+        body.sidebar-collapsed .main-content {
+            margin-left: var(--sidebar-width-collapsed);
+        }
+
+        body.sidebar-collapsed .collapse-btn i {
+            transform: rotate(180deg);
+        }
+
+        .collapse-btn {
+            background: #f1f5f9;
+            border: none;
+            color: #64748b;
+            border-radius: 10px;
+            padding: 0.6rem;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .collapse-btn:hover {
+            background: #e2e8f0;
+            color: #0f172a;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+    <!-- Menú Lateral -->
+    <nav class="sidebar" id="sidebar">
+        <a href="{% url 'socios:dashboard' %}" class="sidebar-brand">
+            <div class="logo-icon">
+                <!-- Ícono de columnas clásicas (si preferís las iniciales, cambia la línea de abajo por: <strong style="font-size: 1rem;">SI</strong>) -->
+                <i class="bi bi-bank"></i>
+            </div>
+            <span>Sociedad Italiana</span>
+        </a>
+
+        <ul class="sidebar-menu">
+            <li>
+                <a href="{% url 'socios:dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" title="Dashboard">
+                    <i class="bi bi-grid-fill"></i> <span>Dashboard</span>
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'socios:socio_list' %}" class="{% if 'socio' in request.resolver_match.url_name %}active{% endif %}" title="Socios">
+                    <i class="bi bi-people-fill"></i> <span>Socios</span>
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'socios:cuota_list' %}" class="{% if 'cuota' in request.resolver_match.url_name %}active{% endif %}" title="Cuotas">
+                    <i class="bi bi-receipt"></i> <span>Cuotas</span>
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'socios:pago_list' %}" class="{% if 'pago' in request.resolver_match.url_name %}active{% endif %}" title="Pagos">
+                    <i class="bi bi-wallet2"></i> <span>Pagos</span>
+                </a>
+            </li>
+            <li class="mt-4">
+                <a href="{% url 'admin:index' %}" title="Administración">
+                    <i class="bi bi-gear-fill"></i> <span>Administración</span>
+                </a>
+            </li>
+        </ul>
+
+        <!-- Botón de Colapsar y Salir -->
+        <div class="pt-3 border-top d-flex flex-column gap-2">
+            <button class="collapse-btn" id="sidebarToggle" title="Minimizar menú">
+                <i class="bi bi-chevron-left"></i> <span class="sidebar-footer-text">Minimizar</span>
+            </button>
+            
+            <form action="{% url 'logout' %}" method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-light w-100 text-danger d-flex align-items-center justify-content-center gap-2 border-0 rounded-3 py-2" title="Salir">
+                    <i class="bi bi-box-arrow-right"></i> <span>Salir</span>
+                </button>
+            </form>
+        </div>
+    </nav>
+
+    <!-- Contenedor Principal -->
+    <div class="main-content">
+        <!-- Topbar limpia -->
+        <header class="topbar">
+            <div class="d-flex align-items-center">
+                <span class="text-secondary fw-medium small">Panel de Gestión Institucional</span>
+            </div>
+            <button id="theme-toggle" class="btn btn-outline-secondary btn-sm me-2" type="button" aria-label="Cambiar tema">
+  <i class="bi bi-moon-stars"></i>
+</button>
+            <div class="d-flex align-items-center gap-2">
+                <div class="user-avatar">
+                    <i class="bi bi-person-fill"></i>
+                </div>
+                <span class="fw-semibold small text-dark">{{ request.user.username|title }}</span>
+            </div>
+        </header>
+
+        <!-- Cuerpo Dinámico -->
+        <main class="content-body">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show rounded-3 border-0 shadow-sm mb-4" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            {% block content %}
+            {% endblock %}
+        </main>
+    </div>
+
+    <!-- Bootstrap JS & Script para el Colapso -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const body = document.body;
+
+        if (localStorage.getItem('sidebarState') === 'collapsed') {
+            body.classList.add('sidebar-collapsed');
+        }
+
+        sidebarToggle.addEventListener('click', () => {
+            body.classList.toggle('sidebar-collapsed');
+            if (body.classList.contains('sidebar-collapsed')) {
+                localStorage.setItem('sidebarState', 'collapsed');
+            } else {
+                localStorage.setItem('sidebarState', 'expanded');
+            }
+        });
+    </script>
+    {% block extra_js %}{% endblock %}
+    <script>
+  document.addEventListener("change", function (e) {
+    const el = e.target.closest("[data-autosubmit]");
+    if (el && el.form) {
+      el.form.requestSubmit();
+    }
+  });
+</script>
+</body>
+</html>

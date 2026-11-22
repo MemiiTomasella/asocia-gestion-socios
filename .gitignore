@@ -1,0 +1,13 @@
+# Entorno virtual (se reconstruye con requirements.txt)
+venv/
+
+# Variables de entorno: contraseñas y claves. NUNCA se suben.
+.env
+
+# Archivos que genera Python automáticamente
+__pycache__/
+*.pyc
+
+# Archivos generados por Django
+staticfiles/
+db.sqlite3

@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Pagos{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <div>
+    <h1 class="h3 mb-0">Pagos registrados</h1>
+    <p class="text-muted mb-0">{{ paginator.count }} pago{{ paginator.count|pluralize }} · Total: <strong>${{ total|floatformat:2 }}</strong></p>
+  </div>
+  <a href="{% url 'socios:cuota_list' %}?estado=PENDIENTE" class="btn btn-success"><i class="bi bi-cash"></i> Cobrar cuotas</a>
+</div>
+
+<form method="get" class="card card-body shadow-sm mb-3">
+  <div class="row g-2 align-items-end">
+    <div class="col-md-6">
+      <label for="q" class="form-label">Buscar socio</label>
+      <div class="input-group">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input type="search" id="q" name="q" value="{{ q }}" class="form-control" placeholder="DNI, apellido o nombre">
+      </div>
+    </div>
+    <div class="col-md-4">
+      <label for="metodo" class="form-label">Método de pago</label>
+      <select id="metodo" name="metodo" class="form-select" data-autosubmit>
+        <option value="">Todos</option>
+        {% for valor, etiqueta in metodos %}
+        <option value="{{ valor }}" {% if metodo == valor %}selected{% endif %}>{{ etiqueta }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2 d-flex gap-2">
+      <button type="submit" class="btn btn-dark flex-fill">Buscar</button>
+      <a href="{% url 'socios:pago_list' %}" class="btn btn-outline-secondary" title="Limpiar filtros"><i class="bi bi-x-lg"></i></a>
+    </div>
+  </div>
+</form>
+
+<div class="card shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr><th>Fecha</th><th>Socio</th><th>Cuota</th><th>Método</th><th class="text-end">Monto</th></tr>
+      </thead>
+      <tbody>
+        {% for p in pagos %}
+        <tr>
+          <td>{{ p.fecha_pago|date:"d/m/Y" }}</td>
+          <td><a href="{% url 'socios:socio_detail' p.cuota.socio.pk %}" class="text-decoration-none">{{ p.cuota.socio.nombre_completo }}</a></td>
+          <td>{{ p.cuota.periodo }}</td>
+          <td>{{ p.get_metodo_pago_display }}</td>
+          <td class="text-end">${{ p.monto_pagado|floatformat:2 }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="text-center text-muted py-5">No hay pagos con esos criterios.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% include "includes/pagination.html" %}
+{% endblock %}
