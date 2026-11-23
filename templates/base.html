@@ -104,6 +104,7 @@
             margin-bottom: 2rem;
             white-space: nowrap;
             overflow: hidden;
+            flex-shrink: 0;             /* el logo nunca se aplasta, aunque la ventana sea baja */
         }
 
         .sidebar-brand .logo-icon {
@@ -124,6 +125,9 @@
             padding: 0;
             margin: 0;
             flex-grow: 1;
+            min-height: 0;              /* si no entra, el menú hace scroll en vez de empujar al logo */
+            overflow-y: auto;
+            overflow-x: hidden;
         }
 
         .sidebar-menu li {
