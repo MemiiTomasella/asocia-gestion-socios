@@ -39,7 +39,7 @@
   <div class="table-responsive">
     <table class="table table-hover mb-0">
       <thead class="table-light">
-        <tr><th>Fecha</th><th>Socio</th><th>Cuota</th><th>Método</th><th class="text-end">Monto</th></tr>
+        <tr><th>Fecha</th><th>Socio</th><th>Cuota</th><th>Método</th><th class="text-end">Monto</th><th class="text-end">Comprobante</th></tr>
       </thead>
       <tbody>
         {% for p in pagos %}
@@ -48,10 +48,11 @@
           <td><a href="{% url 'socios:socio_detail' p.cuota.socio.pk %}" class="text-decoration-none">{{ p.cuota.socio.nombre_completo }}</a></td>
           <td>{{ p.cuota.periodo }}</td>
           <td>{{ p.get_metodo_pago_display }}</td>
-          <td class="text-end">${{ p.monto_pagado|floatformat:2 }}</td>
+          <td class="text-end">${{ p.monto_pagado|floatformat:"2g" }}</td>
+          <td class="text-end"><a href="{% url 'socios:pago_comprobante' p.pk %}" class="btn btn-sm btn-outline-secondary" title="Ver e imprimir comprobante"><i class="bi bi-receipt"></i> N° {{ p.pk|stringformat:"06d" }}</a></td>
         </tr>
         {% empty %}
-        <tr><td colspan="5" class="text-center text-muted py-5">No hay pagos con esos criterios.</td></tr>
+        <tr><td colspan="6" class="text-center text-muted py-5">No hay pagos con esos criterios.</td></tr>
         {% endfor %}
       </tbody>
     </table>

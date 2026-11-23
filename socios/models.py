@@ -1,4 +1,5 @@
 """Modelos de datos: Categoria, Socio, Cuota y Pago."""
+import re
 from datetime import timedelta
 from decimal import Decimal
 
@@ -51,6 +52,14 @@ class Socio(models.Model):
         ACTIVO = "ACTIVO", "Activo"
         INACTIVO = "INACTIVO", "Inactivo"
 
+    class Cargo(models.TextChoices):
+        """Cargo en la comisión directiva. Es un rol temporal: NO cambia la cuota (eso lo define la categoría)."""
+        PRESIDENTE = "PRESIDENTE", "Presidente/a"
+        VICEPRESIDENTE = "VICEPRESIDENTE", "Vicepresidente/a"
+        SECRETARIO = "SECRETARIO", "Secretario/a"
+        TESORERO = "TESORERO", "Tesorero/a"
+        VOCAL = "VOCAL", "Vocal"
+
     dni = models.CharField("DNI", max_length=8, unique=True, validators=[dni_validator])
     nombre = models.CharField("Nombre", max_length=60)
     apellido = models.CharField("Apellido", max_length=60)
@@ -67,6 +76,10 @@ class Socio(models.Model):
     )
     estado = models.CharField(
         "Estado", max_length=10, choices=Estado.choices, default=Estado.ACTIVO
+    )
+    cargo = models.CharField(
+        "Cargo en la comisión directiva", max_length=20, choices=Cargo.choices, blank=True,
+        help_text="Opcional. Dejalo vacío si no integra la comisión directiva.",
     )
 
     class Meta:
@@ -88,6 +101,30 @@ class Socio(models.Model):
         hoy = timezone.localdate()
         nac = self.fecha_nacimiento
         return hoy.year - nac.year - ((hoy.month, hoy.day) < (nac.month, nac.day))
+
+    def estado_de_cuenta(self):
+        """Resumen de lo que debe el socio: se usa en su ficha, en el recordatorio y en el portal."""
+        hoy = timezone.localdate()
+        impagas = [c for c in self.cuotas.prefetch_related("pagos") if c.estado == Cuota.Estado.PENDIENTE]
+        vencidas = [c for c in impagas if c.fecha_vencimiento < hoy]
+        return {
+            "deuda_total": sum((c.saldo for c in impagas), Decimal("0")),
+            "deuda_vencida": sum((c.saldo for c in vencidas), Decimal("0")),
+            "cuotas_impagas": len(impagas),
+            "cuotas_vencidas": len(vencidas),
+        }
+
+    @property
+    def telefono_whatsapp(self):
+        """Teléfono en formato internacional para WhatsApp (Argentina: 549 + característica + número).
+
+        Ej.: "3777-412345" -> "5493777412345". Devuelve "" si el socio no tiene teléfono.
+        """
+        digitos = re.sub(r"\D", "", self.telefono or "")
+        if not digitos:
+            return ""
+        digitos = digitos.lstrip("0")
+        return digitos if digitos.startswith("54") else f"549{digitos}"
 
     def clean(self):
         if self.fecha_nacimiento and self.fecha_nacimiento > timezone.localdate():

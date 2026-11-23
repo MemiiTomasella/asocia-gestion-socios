@@ -198,7 +198,8 @@ class VistasTests(TestCase):
             "fecha_pago": timezone.localdate().isoformat(),
             "monto_pagado": "5000", "metodo_pago": "TRANSFERENCIA",
         })
-        self.assertRedirects(resp, reverse("socios:cuota_list"))
+        # Después de cobrar, el sistema muestra el comprobante del pago
+        self.assertRedirects(resp, reverse("socios:pago_comprobante", args=[Pago.objects.get().pk]))
         cuota.refresh_from_db()
         self.assertEqual(cuota.estado, Cuota.Estado.PAGADA)
 

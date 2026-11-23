@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load asocia %}
 
 {% block title %}Panel | Asocia{% endblock %}
 
@@ -89,7 +90,11 @@
                         <tr>
                             <td class="fw-medium text-dark">{{ socio.nombre_completo }}</td>
                             <td><span class="badge bg-light text-secondary border">{{ socio.categoria.nombre }}</span></td>
-                            <td class="text-end"><span class="badge bg-danger-subtle text-danger px-2 py-1 rounded-pill">{{ socio.cuotas_vencidas }} vencida{{ socio.cuotas_vencidas|pluralize }}</span></td>
+                            <td class="text-end text-nowrap">
+                                <span class="badge bg-danger-subtle text-danger px-2 py-1 rounded-pill">{{ socio.cuotas_vencidas }} vencida{{ socio.cuotas_vencidas|pluralize }}</span>
+                                {% whatsapp_recordatorio socio as link_wa %}
+                                {% if link_wa %}<a href="{{ link_wa }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-success ms-1 py-0" title="Recordar por WhatsApp"><i class="bi bi-whatsapp"></i></a>{% endif %}
+                            </td>
                         </tr>
                         {% empty %}
                         <tr><td colspan="3" class="text-center text-muted small py-3">No hay socios con cuotas vencidas.</td></tr>

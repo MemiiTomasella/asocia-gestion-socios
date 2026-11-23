@@ -1,6 +1,7 @@
 """Carga datos de demostración (ficticios) en una base vacía.
 
-Uso:  python manage.py cargar_demo
+Uso:  python manage.py cargar_demo              (solo si la base no tiene socios)
+      python manage.py cargar_demo --reiniciar  (borra los datos y vuelve a cargar; pide confirmación)
 
 Crea categorías, ~20 socios con nombres inventados, sus cuotas mensuales desde
 la fecha de alta y pagos con distintos comportamientos: socios al día, socios
@@ -19,8 +20,7 @@ from socios.models import Categoria, Cuota, Pago, Socio
 
 CATEGORIAS = [
     ("Activo", Decimal("6000"), "Socio adulto con todos los derechos."),
-    ("Adherente", Decimal("4000"), "Participa de actividades, sin voto en asamblea."),
-    ("Grupo familiar", Decimal("9000"), "Titular más su grupo familiar conviviente."),
+    ("Menor", Decimal("3000"), "Socios menores de 18 años."),
 ]
 
 # Nombres inventados: no corresponden a personas reales
@@ -52,7 +52,26 @@ def meses_entre(desde, hasta):
 class Command(BaseCommand):
     help = "Carga socios, cuotas y pagos ficticios para la demostración (solo en una base sin socios)."
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--reiniciar", action="store_true",
+            help="Borra TODOS los socios, cuotas, pagos y categorías antes de cargar la demo.",
+        )
+        parser.add_argument("--sin-confirmar", action="store_true", help="No pide confirmación (para tests).")
+
     def handle(self, *args, **options):
+        if options["reiniciar"]:
+            if not options["sin_confirmar"]:
+                respuesta = input("Esto BORRA todos los socios, cuotas, pagos y categorías. Escribí BORRAR para seguir: ")
+                if respuesta.strip() != "BORRAR":
+                    raise CommandError("Cancelado: no se borró nada.")
+            with transaction.atomic():
+                # Se borra de "abajo hacia arriba" porque las claves foráneas usan PROTECT
+                Pago.objects.all().delete()
+                Cuota.objects.all().delete()
+                Socio.objects.all().delete()
+                Categoria.objects.all().delete()
+            self.stdout.write("Datos anteriores borrados.")
         if Socio.objects.exists():
             raise CommandError(
                 "La base ya tiene socios. Este comando es solo para una base vacía, "
@@ -76,20 +95,31 @@ class Command(BaseCommand):
             perfiles = ["inactivo", "inactivo"] + resto
 
             totales = {"socios": 0, "cuotas": 0, "pagos": 0}
+            cargos_pendientes = [Socio.Cargo.PRESIDENTE, Socio.Cargo.SECRETARIO,
+                                 Socio.Cargo.TESORERO, Socio.Cargo.VOCAL]
             for i, ((apellido, nombre), dias, perfil) in enumerate(zip(SOCIOS, DIAS_DESDE_EL_ALTA, perfiles)):
                 alta = hoy - timedelta(days=dias)
-                categoria = categorias[0] if i % 4 else categorias[1 + (i % 8 == 0)]
+                # Casi todos son "Activo"; algunos "Menor" (cuota reducida)
+                categoria = categorias[1] if i in (5, 11, 17) else categorias[0]
                 socio = Socio.objects.create(
-                    dni=str(azar.randint(20_000_000, 45_999_999)),
+                    # Los menores (nacidos 2009-2012) tienen DNI de numeración más alta
+                    dni=str(azar.randint(49_000_000, 53_999_999) if categoria == categorias[1]
+                            else azar.randint(20_000_000, 45_999_999)),
                     nombre=nombre, apellido=apellido,
                     email=f"{nombre.lower()}.{apellido.lower()}@ejemplo.com".replace("í", "i").replace("á", "a").replace("ó", "o"),
                     telefono=f"3777-{azar.randint(400000, 699999)}",
                     direccion=f"Calle {azar.randint(1, 40)} N° {azar.randint(100, 2500)}",
-                    fecha_nacimiento=date(azar.randint(1955, 2005), azar.randint(1, 12), azar.randint(1, 28)),
+                    fecha_nacimiento=date(
+                        azar.randint(2009, 2012) if categoria.nombre == "Menor" else azar.randint(1955, 2005),
+                        azar.randint(1, 12), azar.randint(1, 28)),
                     fecha_alta=alta,
                     categoria=categoria,
                     estado=Socio.Estado.INACTIVO if perfil == "inactivo" else Socio.Estado.ACTIVO,
                 )
+                if perfil == "al_dia" and categoria == categorias[0] and cargos_pendientes:
+                    # La comisión directiva: algunos socios al día ocupan un cargo (no cambia su cuota)
+                    socio.cargo = cargos_pendientes.pop(0)
+                    socio.save(update_fields=["cargo"])
                 totales["socios"] += 1
 
                 # Los inactivos pagaron hasta que se dieron de baja (3 meses antes de hoy)

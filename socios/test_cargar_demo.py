@@ -29,3 +29,14 @@ class CargarDemoTests(TestCase):
         with self.assertRaises(CommandError):
             call_command("cargar_demo", stdout=io.StringIO())
         self.assertEqual(Socio.objects.count(), 1)  # no agregó nada
+
+    def test_reiniciar_borra_y_vuelve_a_cargar(self):
+        crear_socio()
+        call_command("cargar_demo", "--reiniciar", "--sin-confirmar", stdout=io.StringIO())
+        self.assertEqual(Socio.objects.count(), 20)
+        # La demo no incluye categorías que el sistema no maneja (por ej., grupo familiar)
+        from .models import Categoria
+        self.assertEqual(set(Categoria.objects.values_list("nombre", flat=True)), {"Activo", "Menor"})
+        # Hay comisión directiva, y sus integrantes pagan la cuota de su categoría (el cargo no la cambia)
+        self.assertEqual(Socio.objects.exclude(cargo="").count(), 4)
+        self.assertFalse(Socio.objects.exclude(cargo="").exclude(categoria__nombre="Activo").exists())

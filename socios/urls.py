@@ -25,6 +25,7 @@ urlpatterns = [
     # Pagos
     path("cuotas/<int:cuota_pk>/cobrar/", views.pago_registrar, name="pago_registrar"),
     path("pagos/", views.PagoListView.as_view(), name="pago_list"),
+    path("pagos/<int:pk>/comprobante/", views.pago_comprobante, name="pago_comprobante"),
 
     # Informes
     path("informes/", views.informes, name="informes"),

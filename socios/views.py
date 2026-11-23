@@ -100,6 +100,12 @@ class SocioListView(LoginRequiredMixin, QuerystringMixin, ListView):
     context_object_name = "socios"
     paginate_by = 10
 
+    def get(self, request, *args, **kwargs):
+        # ?formato=csv descarga el padrón con los mismos filtros que se ven en pantalla
+        if request.GET.get("formato") == "csv":
+            return exportar_padron_csv(self.get_queryset())
+        return super().get(request, *args, **kwargs)
+
     def get_queryset(self):
         hoy = timezone.localdate()
         qs = Socio.objects.select_related("categoria").annotate(
@@ -129,6 +135,8 @@ class SocioListView(LoginRequiredMixin, QuerystringMixin, ListView):
             qs = qs.filter(categoria_id=categoria)
         if params.get("moroso") == "1":
             qs = qs.filter(estado=Socio.Estado.ACTIVO, cuotas_vencidas__gt=0)
+        if params.get("directiva") == "1":
+            qs = qs.exclude(cargo="")  # solo quienes integran la comisión directiva
         # Con annotate(Count(...)) Django agrupa (GROUP BY) y deja de aplicar el
         # orden del Meta del modelo: lo indicamos explícito para que la paginación sea estable.
         return qs.order_by("apellido", "nombre")
@@ -142,6 +150,7 @@ class SocioListView(LoginRequiredMixin, QuerystringMixin, ListView):
                 "estado": params.get("estado", ""),
                 "categoria": params.get("categoria", ""),
                 "moroso": params.get("moroso") == "1",
+                "directiva": params.get("directiva") == "1",
                 "categorias": Categoria.objects.all(),
             }
         )
@@ -156,6 +165,7 @@ class SocioDetailView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["cuotas"] = self.object.cuotas.prefetch_related("pagos")
+        context["cuenta"] = self.object.estado_de_cuenta()
         return context
 
 
@@ -366,7 +376,8 @@ def pago_registrar(request, cuota_pk):
                     f"Se registró el pago de ${pago.monto_pagado} de {cuota.socio.nombre_completo} "
                     f"({cuota.periodo}). La cuota quedó saldada.",
                 )
-            return redirect("socios:cuota_list")
+            # Después de cobrar se muestra el comprobante, listo para imprimir o guardar en PDF
+            return redirect("socios:pago_comprobante", pk=pago.pk)
     else:
         form = PagoForm(instance=pago, initial={"monto_pagado": cuota.saldo})
 
@@ -511,3 +522,44 @@ def informes(request):
         },
     }
     return render(request, "socios/informes.html", contexto)
+
+
+# ---------------------------------------------------------------------------
+# Comprobante de pago y exportación del padrón
+# ---------------------------------------------------------------------------
+@login_required
+def pago_comprobante(request, pk):
+    """Comprobante de un pago (RF-09). Se imprime o se guarda como PDF desde el navegador."""
+    pago = get_object_or_404(Pago.objects.select_related("cuota__socio__categoria"), pk=pk)
+    cuota = pago.cuota
+    # Un comprobante no puede cambiar después de emitido: el saldo se calcula con los pagos
+    # registrados HASTA este pago inclusive, no con los que se hayan hecho después.
+    pagos_hasta_este = cuota.pagos.filter(
+        Q(fecha_pago__lt=pago.fecha_pago) | Q(fecha_pago=pago.fecha_pago, pk__lte=pago.pk)
+    )
+    pagado_al_momento = pagos_hasta_este.aggregate(total=Sum("monto_pagado"))["total"]
+    return render(request, "socios/pago_comprobante.html", {
+        "pago": pago,
+        "cuota": cuota,
+        "socio": cuota.socio,
+        "numero": f"{pago.pk:06d}",  # número de comprobante: 000123
+        "pagado_al_momento": pagado_al_momento,
+        "saldo_al_momento": cuota.monto - pagado_al_momento,
+    })
+
+
+def exportar_padron_csv(socios):
+    hoy = timezone.localdate()
+    respuesta = HttpResponse(content_type="text/csv; charset=utf-8")
+    respuesta["Content-Disposition"] = f'attachment; filename="padron_socios_{hoy:%Y%m%d}.csv"'
+    respuesta.write("\ufeff")  # BOM: para que Excel muestre bien los acentos
+    escritor = csv.writer(respuesta, delimiter=";")
+    escritor.writerow(["DNI", "Apellido", "Nombre", "Categoría", "Estado", "Fecha de alta",
+                       "Teléfono", "Email", "Dirección", "Cuotas vencidas"])
+    for socio in socios:
+        escritor.writerow([
+            socio.dni, socio.apellido, socio.nombre, socio.categoria.nombre,
+            socio.get_estado_display(), f"{socio.fecha_alta:%d/%m/%Y}",
+            socio.telefono, socio.email, socio.direccion, socio.cuotas_vencidas,
+        ])
+    return respuesta

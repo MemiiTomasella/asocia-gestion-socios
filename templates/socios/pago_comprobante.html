@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Comprobante N° {{ numero }} | Asocia{% endblock %}
+
+{% block content %}
+<style>
+    /* Al imprimir solo sale el comprobante: se ocultan menú, barra superior, avisos y botones */
+    @media print {
+        .sidebar, .topbar, .alert, .no-imprimir { display: none !important; }
+        body, .main-content { margin: 0 !important; background: #fff !important; }
+        .comprobante { border: 1px solid #999 !important; box-shadow: none !important; }
+    }
+    .comprobante { max-width: 720px; }
+    .comprobante .linea { border-top: 1px dashed var(--border-ui); }
+</style>
+
+<div class="d-flex flex-wrap gap-2 mb-4 no-imprimir">
+    <button type="button" class="btn btn-success" onclick="window.print()">
+        <i class="bi bi-printer"></i> Imprimir o guardar en PDF
+    </button>
+    <a href="{% url 'socios:socio_detail' socio.pk %}" class="btn btn-outline-secondary"><i class="bi bi-person"></i> Ver ficha del socio</a>
+    <a href="{% url 'socios:cuota_list' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Volver a cuotas</a>
+</div>
+
+<div class="card-ui comprobante p-4 p-md-5 mx-auto">
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div class="d-flex align-items-center gap-3">
+            <div class="d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; border-radius: 12px; background: #1F6B4F;">
+                <svg width="28" height="28" viewBox="0 0 64 64" aria-hidden="true">
+                    <path d="M12 54 L32 10 L52 54" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    <path d="M21 39 L29 46 L44 31" stroke="#3FB37F" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                </svg>
+            </div>
+            <div>
+                <div class="fw-bold fs-5">{{ institucion_nombre }}</div>
+                <div class="text-muted small">Comprobante de pago de cuota social</div>
+            </div>
+        </div>
+        <div class="text-end">
+            <div class="text-muted small">Comprobante N°</div>
+            <div class="fw-bold fs-5">{{ numero }}</div>
+            <div class="text-muted small">{{ pago.fecha_pago|date:"d/m/Y" }}</div>
+        </div>
+    </div>
+
+    <div class="linea pt-3 mb-3">
+        <div class="row small">
+            <div class="col-sm-6 mb-2"><span class="text-muted">Socio:</span> <strong>{{ socio.nombre }} {{ socio.apellido }}</strong></div>
+            <div class="col-sm-6 mb-2"><span class="text-muted">DNI:</span> {{ socio.dni }}</div>
+            <div class="col-sm-6 mb-2"><span class="text-muted">Categoría:</span> {{ socio.categoria.nombre }}</div>
+            <div class="col-sm-6 mb-2"><span class="text-muted">Medio de pago:</span> {{ pago.get_metodo_pago_display }}</div>
+        </div>
+    </div>
+
+    <table class="table table-borderless align-middle mb-3">
+        <thead class="small text-muted border-bottom">
+            <tr><th>Concepto</th><th class="text-end">Importe</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Cuota social {{ cuota.periodo }}{% if saldo_al_momento > 0 or pago.monto_pagado < cuota.monto %} <span class="text-muted small">(pago parcial)</span>{% endif %}</td>
+                <td class="text-end fw-bold fs-5">${{ pago.monto_pagado|floatformat:"2g" }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="linea pt-3 small">
+        <div class="d-flex justify-content-between"><span class="text-muted">Valor de la cuota</span><span>${{ cuota.monto|floatformat:"2g" }}</span></div>
+        <div class="d-flex justify-content-between"><span class="text-muted">Total pagado de esta cuota, a la fecha del comprobante</span><span>${{ pagado_al_momento|floatformat:"2g" }}</span></div>
+        <div class="d-flex justify-content-between fw-semibold mt-1">
+            <span>Saldo pendiente de la cuota</span>
+            <span class="{% if saldo_al_momento > 0 %}text-danger{% else %}text-success{% endif %}">${{ saldo_al_momento|floatformat:"2g" }}</span>
+        </div>
+    </div>
+
+    <p class="text-muted small mt-4 mb-0">Recibido por: {{ request.user.get_full_name|default:request.user.username }} · Emitido con Asocia</p>
+</div>
+{% endblock %}

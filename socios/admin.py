@@ -36,8 +36,8 @@ def reactivar(modeladmin, request, queryset):
 
 @admin.register(Socio)
 class SocioAdmin(admin.ModelAdmin):
-    list_display = ("dni", "apellido", "nombre", "categoria", "email", "telefono", "estado", "fecha_alta")
-    list_filter = ("estado", "categoria")
+    list_display = ("dni", "apellido", "nombre", "categoria", "cargo", "email", "telefono", "estado", "fecha_alta")
+    list_filter = ("estado", "categoria", "cargo")
     search_fields = ("dni", "apellido", "nombre", "email")
     list_select_related = ("categoria",)
     date_hierarchy = "fecha_alta"

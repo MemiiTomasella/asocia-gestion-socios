@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load asocia %}
 {% block title %}{{ socio.nombre_completo }}{% endblock %}
 
 {% block content %}
@@ -17,7 +18,8 @@
           <h1 class="h5 mb-1">{{ socio.nombre }} {{ socio.apellido }}</h1>
           {% if socio.esta_activo %}<span class="badge text-bg-success">Activo</span>{% else %}<span class="badge text-bg-secondary">Inactivo</span>{% endif %}
         </div>
-        <p class="text-muted">{{ socio.categoria.nombre }} · ${{ socio.categoria.monto_cuota|floatformat:2 }}/mes</p>
+        <p class="text-muted mb-2">{{ socio.categoria.nombre }} · ${{ socio.categoria.monto_cuota|floatformat:"2g" }}/mes</p>
+        {% if socio.cargo %}<p class="mb-3"><span class="badge rounded-pill text-bg-light border"><i class="bi bi-award"></i> {{ socio.get_cargo_display }} · Comisión directiva</span></p>{% endif %}
         <dl class="row small mb-3">
           <dt class="col-5">DNI</dt><dd class="col-7">{{ socio.dni }}</dd>
           <dt class="col-5">Nacimiento</dt><dd class="col-7">{{ socio.fecha_nacimiento|date:"d/m/Y" }} ({{ socio.edad }} años)</dd>
@@ -46,6 +48,37 @@
   </div>
 
   <div class="col-lg-8">
+    <!-- Estado de cuenta: lo calcula Socio.estado_de_cuenta() a partir de cuotas y pagos -->
+    <div class="row g-3 mb-3">
+      <div class="col-sm-4">
+        <div class="card-ui p-3 h-100">
+          <div class="text-muted small text-uppercase">Total adeudado</div>
+          <div class="fs-4 fw-bold {% if cuenta.deuda_total %}text-danger{% else %}text-success{% endif %}">${{ cuenta.deuda_total|floatformat:"2g" }}</div>
+          <div class="text-muted small">{{ cuenta.cuotas_impagas }} cuota{{ cuenta.cuotas_impagas|pluralize }} sin saldar</div>
+        </div>
+      </div>
+      <div class="col-sm-4">
+        <div class="card-ui p-3 h-100">
+          <div class="text-muted small text-uppercase">Vencido</div>
+          <div class="fs-4 fw-bold {% if cuenta.deuda_vencida %}text-danger{% endif %}">${{ cuenta.deuda_vencida|floatformat:"2g" }}</div>
+          <div class="text-muted small">{{ cuenta.cuotas_vencidas }} cuota{{ cuenta.cuotas_vencidas|pluralize }} vencida{{ cuenta.cuotas_vencidas|pluralize }}</div>
+        </div>
+      </div>
+      <div class="col-sm-4">
+        <div class="card-ui p-3 h-100 d-flex flex-column justify-content-center">
+          {% whatsapp_recordatorio socio as link_wa %}
+          {% if link_wa %}
+          <a href="{{ link_wa }}" target="_blank" rel="noopener" class="btn btn-success"><i class="bi bi-whatsapp"></i> Recordar por WhatsApp</a>
+          <div class="text-muted small mt-2 text-center">Abre WhatsApp con el mensaje listo</div>
+          {% elif cuenta.cuotas_vencidas %}
+          <div class="text-muted small text-center">Cargá un teléfono para enviarle un recordatorio por WhatsApp.</div>
+          {% else %}
+          <div class="text-success text-center fw-semibold"><i class="bi bi-patch-check-fill"></i> Al día</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
     <div class="card shadow-sm">
       <div class="card-header bg-white fw-semibold">Historial de cuotas</div>
       <div class="table-responsive">
@@ -61,6 +94,7 @@
               <td class="text-end">
                 ${{ c.monto|floatformat:"2g" }}
                 {% if c.es_parcial %}<div class="small text-muted">Pagó ${{ c.total_pagado|floatformat:"2g" }} · Debe ${{ c.saldo|floatformat:"2g" }}</div>{% endif %}
+                {% for p in c.pagos.all %}<div class="small"><a href="{% url 'socios:pago_comprobante' p.pk %}" class="text-decoration-none" title="Ver comprobante"><i class="bi bi-receipt"></i> {{ p.fecha_pago|date:"d/m" }} · ${{ p.monto_pagado|floatformat:"2g" }}</a></div>{% endfor %}
               </td>
               <td>
                 {% include "includes/estado_cuota.html" with c=c %}

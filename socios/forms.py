@@ -33,7 +33,7 @@ class SocioForm(BootstrapFormMixin, forms.ModelForm):
         model = Socio
         fields = [
             "dni", "nombre", "apellido", "email", "telefono", "direccion",
-            "fecha_nacimiento", "fecha_alta", "categoria", "estado",
+            "fecha_nacimiento", "fecha_alta", "categoria", "estado", "cargo",
         ]
         widgets = {
             "dni": forms.TextInput(
@@ -47,6 +47,7 @@ class SocioForm(BootstrapFormMixin, forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["categoria"].empty_label = "Seleccionar categoría..."
+        self.fields["cargo"].choices = [("", "Sin cargo")] + list(Socio.Cargo.choices)
 
 
 class CuotaForm(BootstrapFormMixin, forms.ModelForm):
