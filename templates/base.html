@@ -447,6 +447,8 @@
                 document.documentElement.setAttribute('data-bs-theme', nuevo);
                 localStorage.setItem('tema', nuevo);
                 pintarIconoTema();
+                // Avisamos a la página (por ejemplo, los gráficos de Informes) que cambió el tema
+                document.dispatchEvent(new CustomEvent('tema-cambiado', { detail: nuevo }));
             });
         }
     </script>
