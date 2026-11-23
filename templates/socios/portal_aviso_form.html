@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Avisar un pago | Asocia{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <h1 class="fw-bold mb-1">Avisar que transferí</h1>
+    <p class="text-secondary">Completá los datos de tu transferencia. La institución la revisa y, cuando la confirme,
+      vas a ver el pago con su comprobante en <a href="{% url 'socios:portal' %}">Mi cuenta</a>.</p>
+    <div class="card-ui p-4">
+      <form method="post" novalidate>
+        {% csrf_token %}
+        {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+        <div class="row g-3 mb-4">
+          {% include "includes/field.html" with field=form.cuota col="col-12" %}
+          {% include "includes/field.html" with field=form.monto col="col-md-6" %}
+          {% include "includes/field.html" with field=form.fecha_transferencia col="col-md-6" %}
+          {% include "includes/field.html" with field=form.numero_operacion col="col-12" %}
+          {% include "includes/field.html" with field=form.comentario col="col-12" %}
+        </div>
+        <div class="d-flex justify-content-end gap-2">
+          <a href="{% url 'socios:portal' %}" class="btn btn-outline-secondary">Cancelar</a>
+          <button type="submit" class="btn btn-success"><i class="bi bi-send-check"></i> Enviar aviso</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

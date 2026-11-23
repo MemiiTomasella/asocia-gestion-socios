@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Avisos de pago | Asocia{% endblock %}
+{% block content %}
+<h1 class="fw-bold mb-1">Avisos de pago</h1>
+<p class="text-secondary">Transferencias que los socios avisaron desde su portal. Revisá que el dinero esté en la cuenta
+  y confirmá: el sistema registra el pago y genera el comprobante.</p>
+
+<div class="card-ui p-4 mb-4">
+  <h2 class="h6 fw-bold mb-3">Por revisar ({{ pendientes|length }})</h2>
+  <div class="table-responsive">
+    <table class="table table-borderless align-middle mb-0">
+      <thead class="text-muted small border-bottom">
+        <tr><th>Socio</th><th>Cuota</th><th class="text-end">Monto</th><th>Transferencia</th><th>N° de operación</th><th class="text-end">Acción</th></tr>
+      </thead>
+      <tbody>
+        {% for a in pendientes %}
+        <tr>
+          <td><a href="{% url 'socios:socio_detail' a.cuota.socio.pk %}" class="text-decoration-none fw-medium">{{ a.cuota.socio.nombre_completo }}</a></td>
+          <td>{{ a.cuota.periodo }}<div class="small text-muted">saldo ${{ a.cuota.saldo|floatformat:"2g" }}</div></td>
+          <td class="text-end fw-bold">${{ a.monto|floatformat:"2g" }}</td>
+          <td>{{ a.fecha_transferencia|date:"d/m/Y" }}</td>
+          <td>{{ a.numero_operacion }}{% if a.comentario %}<div class="small text-muted">{{ a.comentario }}</div>{% endif %}</td>
+          <td class="text-end text-nowrap">
+            <form method="post" action="{% url 'socios:aviso_confirmar' a.pk %}" class="d-inline" data-confirm="¿Confirmar el pago de ${{ a.monto }} de {{ a.cuota.socio.nombre_completo }}?">
+              {% csrf_token %}<button type="submit" class="btn btn-sm btn-success"><i class="bi bi-check-lg"></i> Confirmar</button>
+            </form>
+            <form method="post" action="{% url 'socios:aviso_rechazar' a.pk %}" class="d-inline" data-confirm="¿Rechazar este aviso?">
+              {% csrf_token %}<button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-x-lg"></i> Rechazar</button>
+            </form>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="text-center text-muted py-4">No hay avisos pendientes.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if revisados %}
+<div class="card-ui p-4">
+  <h2 class="h6 fw-bold mb-3">Revisados recientemente</h2>
+  <div class="table-responsive">
+    <table class="table table-borderless align-middle mb-0 small">
+      <tbody>
+        {% for a in revisados %}
+        <tr>
+          <td>{{ a.cuota.socio.nombre_completo }}</td>
+          <td>{{ a.cuota.periodo }}</td>
+          <td class="text-end">${{ a.monto|floatformat:"2g" }}</td>
+          <td>{% if a.estado == 'CONFIRMADO' %}<span class="badge text-bg-success">Confirmado</span>{% else %}<span class="badge text-bg-danger">Rechazado</span>{% endif %}</td>
+          <td class="text-muted">por {{ a.revisado_por.get_full_name|default:a.revisado_por.username }}</td>
+          <td class="text-end">{% if a.pago %}<a href="{% url 'socios:pago_comprobante' a.pago.pk %}" class="text-decoration-none"><i class="bi bi-receipt"></i> Comprobante</a>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

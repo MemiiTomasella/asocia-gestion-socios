@@ -10,6 +10,15 @@ from django.utils import timezone
 from .models import Categoria, Cuota, Pago, Socio
 
 
+def crear_usuario(username="admin", rol="Secretaría"):
+    """Usuario de prueba con un rol (grupo). Por defecto Secretaría, que puede todo."""
+    from django.contrib.auth.models import Group
+    usuario = get_user_model().objects.create_user(username, password="clave-segura-123")
+    if rol:
+        usuario.groups.add(Group.objects.get(name=rol))
+    return usuario
+
+
 def crear_socio(dni="30111222", apellido="Rossi", nombre="Marco", categoria=None, **extra):
     categoria = categoria or Categoria.objects.get_or_create(
         nombre="Activo", defaults={"monto_cuota": Decimal("5000")}
@@ -85,7 +94,7 @@ class ModelosTests(TestCase):
 class VistasTests(TestCase):
     @classmethod
     def setUpTestData(cls):
-        cls.user = get_user_model().objects.create_user("admin", password="clave-segura-123")
+        cls.user = crear_usuario()
         cls.categoria = Categoria.objects.create(nombre="Activo", monto_cuota=Decimal("5000"))
 
     def setUp(self):
@@ -243,7 +252,7 @@ class VistasTests(TestCase):
 
 class InformesTests(TestCase):
     def setUp(self):
-        get_user_model().objects.create_user("admin", password="clave-segura-123")
+        crear_usuario()
         self.client.login(username="admin", password="clave-segura-123")
         self.url = reverse("socios:informes")
 
@@ -284,7 +293,7 @@ class InterfazTests(TestCase):
         self.assertNotContains(resp, 'id="sidebar"')
 
     def test_nombre_de_institucion_configurable(self):
-        get_user_model().objects.create_user("admin", password="clave-segura-123")
+        crear_usuario()
         self.client.login(username="admin", password="clave-segura-123")
         with self.settings(INSTITUCION_NOMBRE="Club Social Ejemplo"):
             resp = self.client.get(reverse("socios:dashboard"))

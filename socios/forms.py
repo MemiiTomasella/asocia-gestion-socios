@@ -2,7 +2,7 @@
 from django import forms
 from django.utils import timezone
 
-from .models import MESES, Cuota, Pago, Socio
+from .models import MESES, AvisoPago, Cuota, Pago, Socio
 
 
 def fecha_widget():
@@ -90,3 +90,32 @@ class PagoForm(BootstrapFormMixin, forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["fecha_pago"].initial = timezone.localdate()
+
+
+class AvisoPagoForm(BootstrapFormMixin, forms.ModelForm):
+    """Formulario del portal: el socio avisa que transfirió para pagar una de SUS cuotas."""
+
+    class Meta:
+        model = AvisoPago
+        fields = ["cuota", "monto", "fecha_transferencia", "numero_operacion", "comentario"]
+        widgets = {"fecha_transferencia": fecha_widget()}
+
+    def __init__(self, *args, socio, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Solo se pueden elegir cuotas impagas del propio socio (nunca las de otro)
+        self.fields["cuota"].queryset = socio.cuotas.filter(estado=Cuota.Estado.PENDIENTE).order_by("anio", "mes")
+        self.fields["cuota"].label_from_instance = lambda c: f"{c.periodo} · saldo ${c.saldo:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        self.fields["cuota"].empty_label = "Elegí la cuota que pagaste..."
+
+    def clean_fecha_transferencia(self):
+        fecha = self.cleaned_data["fecha_transferencia"]
+        if fecha > timezone.localdate():
+            raise forms.ValidationError("La fecha no puede ser futura.")
+        return fecha
+
+    def clean(self):
+        datos = super().clean()
+        cuota, monto = datos.get("cuota"), datos.get("monto")
+        if cuota and monto and monto > cuota.saldo:
+            self.add_error("monto", f"Supera el saldo de la cuota (${cuota.saldo}).")
+        return datos

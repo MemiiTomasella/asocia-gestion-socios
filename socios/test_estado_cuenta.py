@@ -7,12 +7,12 @@ from django.test import TestCase
 from django.urls import reverse
 
 from .models import Categoria, Cuota, Pago, Socio
-from .tests import crear_socio
+from .tests import crear_socio, crear_usuario
 
 
 class EstadoDeCuentaTests(TestCase):
     def setUp(self):
-        get_user_model().objects.create_user("admin", password="clave-segura-123")
+        crear_usuario()
         self.client.login(username="admin", password="clave-segura-123")
         self.categoria = Categoria.objects.create(nombre="Activo", monto_cuota=Decimal("5000"))
         self.socio = crear_socio(dni="27999888", categoria=self.categoria, telefono="3777-412345",
@@ -72,7 +72,7 @@ class EstadoDeCuentaTests(TestCase):
 
 class ComprobanteNoCambiaTests(TestCase):
     def test_comprobante_viejo_muestra_el_saldo_de_su_momento(self):
-        get_user_model().objects.create_user("admin", password="clave-segura-123")
+        crear_usuario()
         self.client.login(username="admin", password="clave-segura-123")
         socio = crear_socio(dni="27999777", estado=Socio.Estado.INACTIVO)
         cuota = Cuota.objects.create(socio=socio, mes=3, anio=2026, monto=Decimal("5000"), fecha_vencimiento="2026-03-10")

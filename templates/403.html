@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Acceso denegado | Asocia{% endblock %}
+{% block content %}
+<div class="card-ui p-5 text-center mx-auto mt-4" style="max-width: 560px;">
+    <i class="bi bi-shield-lock fs-1 text-danger"></i>
+    <h1 class="h4 fw-bold mt-3">No tenés permiso para esta sección</h1>
+    <p class="text-muted">Tu rol ({{ rol_actual }}) no incluye esta función. Si la necesitás, pedile a Secretaría que te asigne el rol correspondiente.</p>
+    <a href="{% url 'socios:dashboard' %}" class="btn btn-success">Volver al inicio</a>
+</div>
+{% endblock %}

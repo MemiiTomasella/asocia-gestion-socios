@@ -5,18 +5,18 @@ from decimal import Decimal
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.messages.views import SuccessMessageMixin
 from django.db import transaction
 from django.db.models import Count, Q, Sum
 from django.db.models.functions import TruncMonth, TruncWeek, TruncYear
-from django.http import HttpResponse
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DetailView, ListView, UpdateView
 
+from .roles import COBRAN, GESTIONAN_SOCIOS, PERSONAL, RolRequeridoMixin, rol_requerido, tiene_rol
 from .forms import CuotaForm, GenerarCuotasForm, PagoForm, SocioForm
 from .models import MESES, Categoria, Cuota, Pago, Socio
 
@@ -56,7 +56,7 @@ class QuerystringMixin:
 # ---------------------------------------------------------------------------
 # Dashboard
 # ---------------------------------------------------------------------------
-@login_required
+@rol_requerido(*PERSONAL)
 def dashboard(request):
     hoy = timezone.localdate()
 
@@ -95,7 +95,8 @@ def dashboard(request):
 # ---------------------------------------------------------------------------
 # Socios (CRUD)
 # ---------------------------------------------------------------------------
-class SocioListView(LoginRequiredMixin, QuerystringMixin, ListView):
+class SocioListView(RolRequeridoMixin, QuerystringMixin, ListView):
+    roles = PERSONAL
     template_name = "socios/socio_list.html"
     context_object_name = "socios"
     paginate_by = 10
@@ -129,14 +130,20 @@ class SocioListView(LoginRequiredMixin, QuerystringMixin, ListView):
                 | Q(nombre__icontains=q)
                 | Q(email__icontains=q)
             )
-        if estado in Socio.Estado.values:
+        # "Al día" y "Moroso" no son estados guardados: se deducen de las cuotas vencidas
+        if estado == "MOROSO" or params.get("moroso") == "1":
+            qs = qs.filter(estado=Socio.Estado.ACTIVO, cuotas_vencidas__gt=0)
+        elif estado == "AL_DIA":
+            qs = qs.filter(estado=Socio.Estado.ACTIVO, cuotas_vencidas=0)
+        elif estado in Socio.Estado.values:
             qs = qs.filter(estado=estado)
         if categoria.isdigit():
             qs = qs.filter(categoria_id=categoria)
-        if params.get("moroso") == "1":
-            qs = qs.filter(estado=Socio.Estado.ACTIVO, cuotas_vencidas__gt=0)
-        if params.get("directiva") == "1":
-            qs = qs.exclude(cargo="")  # solo quienes integran la comisión directiva
+        cargo = params.get("cargo", "")
+        if cargo == "DIRECTIVA" or params.get("directiva") == "1":
+            qs = qs.exclude(cargo="")  # cualquier integrante de la comisión directiva
+        elif cargo in Socio.Cargo.values:
+            qs = qs.filter(cargo=cargo)
         # Con annotate(Count(...)) Django agrupa (GROUP BY) y deja de aplicar el
         # orden del Meta del modelo: lo indicamos explícito para que la paginación sea estable.
         return qs.order_by("apellido", "nombre")
@@ -149,15 +156,16 @@ class SocioListView(LoginRequiredMixin, QuerystringMixin, ListView):
                 "q": params.get("q", "").strip(),
                 "estado": params.get("estado", ""),
                 "categoria": params.get("categoria", ""),
-                "moroso": params.get("moroso") == "1",
-                "directiva": params.get("directiva") == "1",
+                "cargo": params.get("cargo", ""),
+                "cargos": Socio.Cargo.choices,
                 "categorias": Categoria.objects.all(),
             }
         )
         return context
 
 
-class SocioDetailView(LoginRequiredMixin, DetailView):
+class SocioDetailView(RolRequeridoMixin, DetailView):
+    roles = PERSONAL
     model = Socio
     template_name = "socios/socio_detail.html"
     context_object_name = "socio"
@@ -169,7 +177,8 @@ class SocioDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-class SocioCreateView(LoginRequiredMixin, SuccessMessageMixin, CreateView):
+class SocioCreateView(RolRequeridoMixin, SuccessMessageMixin, CreateView):
+    roles = GESTIONAN_SOCIOS
     model = Socio
     form_class = SocioForm
     template_name = "socios/socio_form.html"
@@ -182,7 +191,8 @@ class SocioCreateView(LoginRequiredMixin, SuccessMessageMixin, CreateView):
         return context
 
 
-class SocioUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
+class SocioUpdateView(RolRequeridoMixin, SuccessMessageMixin, UpdateView):
+    roles = GESTIONAN_SOCIOS
     model = Socio
     form_class = SocioForm
     template_name = "socios/socio_form.html"
@@ -195,7 +205,7 @@ class SocioUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
         return context
 
 
-@login_required
+@rol_requerido(*GESTIONAN_SOCIOS)
 @require_POST
 def socio_baja(request, pk):
     """Baja lógica: el socio queda inactivo pero conserva su historial."""
@@ -206,7 +216,7 @@ def socio_baja(request, pk):
     return redirect("socios:socio_list")
 
 
-@login_required
+@rol_requerido(*GESTIONAN_SOCIOS)
 @require_POST
 def socio_reactivar(request, pk):
     socio = get_object_or_404(Socio, pk=pk)
@@ -219,7 +229,8 @@ def socio_reactivar(request, pk):
 # ---------------------------------------------------------------------------
 # Cuotas
 # ---------------------------------------------------------------------------
-class CuotaListView(LoginRequiredMixin, QuerystringMixin, ListView):
+class CuotaListView(RolRequeridoMixin, QuerystringMixin, ListView):
+    roles = PERSONAL
     template_name = "socios/cuota_list.html"
     context_object_name = "cuotas"
     paginate_by = 15
@@ -276,7 +287,8 @@ class CuotaListView(LoginRequiredMixin, QuerystringMixin, ListView):
         return context
 
 
-class CuotaCreateView(LoginRequiredMixin, SuccessMessageMixin, CreateView):
+class CuotaCreateView(RolRequeridoMixin, SuccessMessageMixin, CreateView):
+    roles = COBRAN
     model = Cuota
     form_class = CuotaForm
     template_name = "socios/cuota_form.html"
@@ -296,7 +308,7 @@ class CuotaCreateView(LoginRequiredMixin, SuccessMessageMixin, CreateView):
         return initial
 
 
-@login_required
+@rol_requerido(*COBRAN)
 def cuotas_generar(request):
     """Genera la cuota del período elegido para todos los socios activos."""
     hoy = timezone.localdate()
@@ -348,7 +360,7 @@ def cuotas_generar(request):
 # ---------------------------------------------------------------------------
 # Pagos
 # ---------------------------------------------------------------------------
-@login_required
+@rol_requerido(*COBRAN)
 def pago_registrar(request, cuota_pk):
     """Cobro de una cuota: crea el pago y actualiza el estado de la cuota."""
     cuota = get_object_or_404(Cuota.objects.select_related("socio"), pk=cuota_pk)
@@ -385,7 +397,8 @@ def pago_registrar(request, cuota_pk):
     return render(request, "socios/pago_form.html", contexto)
 
 
-class PagoListView(LoginRequiredMixin, QuerystringMixin, ListView):
+class PagoListView(RolRequeridoMixin, QuerystringMixin, ListView):
+    roles = PERSONAL
     template_name = "socios/pago_list.html"
     context_object_name = "pagos"
     paginate_by = 15
@@ -457,7 +470,7 @@ def _como_fecha(valor):
     return valor.date() if hasattr(valor, "hour") else valor
 
 
-@login_required
+@rol_requerido(*PERSONAL)
 def informes(request):
     agrupacion = request.GET.get("agrupar", "mes")
     if agrupacion not in AGRUPACIONES:
@@ -531,6 +544,10 @@ def informes(request):
 def pago_comprobante(request, pk):
     """Comprobante de un pago (RF-09). Se imprime o se guarda como PDF desde el navegador."""
     pago = get_object_or_404(Pago.objects.select_related("cuota__socio__categoria"), pk=pk)
+    # Lo ve el personal de la institución, o el socio dueño del pago (desde su portal)
+    es_el_duenio = pago.cuota.socio.usuario_id == request.user.pk
+    if not (tiene_rol(request.user, *PERSONAL) or es_el_duenio):
+        raise Http404("Comprobante inexistente")  # 404 y no 403: no revelamos que existe
     cuota = pago.cuota
     # Un comprobante no puede cambiar después de emitido: el saldo se calcula con los pagos
     # registrados HASTA este pago inclusive, no con los que se hayan hecho después.

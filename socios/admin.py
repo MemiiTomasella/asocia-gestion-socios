@@ -2,7 +2,7 @@
 from django.contrib import admin
 from django.db.models import Count
 
-from .models import Categoria, Cuota, Pago, Socio
+from .models import AvisoPago, Categoria, Cuota, Pago, Socio
 
 admin.site.site_header = "Asocia · Administración"
 admin.site.site_title = "Gestión de socios"
@@ -82,3 +82,10 @@ class PagoAdmin(admin.ModelAdmin):
     @admin.display(description="Socio", ordering="cuota__socio__apellido")
     def socio(self, obj):
         return obj.cuota.socio
+
+
+
+@admin.register(AvisoPago)
+class AvisoPagoAdmin(admin.ModelAdmin):
+    list_display = ("creado", "cuota", "monto", "fecha_transferencia", "numero_operacion", "estado", "revisado_por")
+    list_filter = ("estado",)

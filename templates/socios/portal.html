@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Mi cuenta | Asocia{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+    <div>
+        <h1 class="fw-bold mb-1">Hola, {{ socio.nombre }} 👋</h1>
+        <p class="text-secondary mb-0">Socio/a de {{ institucion_nombre }} · {{ socio.categoria.nombre }} · DNI {{ socio.dni }}</p>
+    </div>
+    <a href="{% url 'socios:portal_avisar_pago' %}" class="btn btn-success"><i class="bi bi-send-check"></i> Avisar que transferí</a>
+</div>
+
+<!-- Estado de cuenta: el mismo cálculo que ve Secretaría en la ficha del socio -->
+<div class="row g-4 mb-4">
+    <div class="col-md-4">
+        <div class="card-ui {% if cuenta.deuda_vencida %}{% else %}card-destacada{% endif %} p-4 h-100">
+            <div class="text-uppercase small fw-medium mb-2 {% if cuenta.deuda_vencida %}text-muted{% else %}text-secondary{% endif %}">Mi situación</div>
+            {% if cuenta.deuda_vencida %}
+            <div class="fs-3 fw-bold text-danger mb-1">Con deuda</div>
+            <div class="text-muted small">{{ cuenta.cuotas_vencidas }} cuota{{ cuenta.cuotas_vencidas|pluralize }} vencida{{ cuenta.cuotas_vencidas|pluralize }}</div>
+            {% else %}
+            <div class="fs-3 fw-bold mb-1"><i class="bi bi-patch-check-fill"></i> Al día</div>
+            <div class="text-muted small">¡Gracias por acompañar a la institución!</div>
+            {% endif %}
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card-ui p-4 h-100">
+            <div class="text-uppercase text-muted small fw-medium mb-2">Total a pagar</div>
+            <div class="fs-3 fw-bold mb-1">${{ cuenta.deuda_total|floatformat:"2g" }}</div>
+            <div class="text-muted small">{{ cuenta.cuotas_impagas }} cuota{{ cuenta.cuotas_impagas|pluralize }} sin saldar</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card-ui p-4 h-100">
+            <div class="text-uppercase text-muted small fw-medium mb-2">Vencido</div>
+            <div class="fs-3 fw-bold {% if cuenta.deuda_vencida %}text-danger{% endif %} mb-1">${{ cuenta.deuda_vencida|floatformat:"2g" }}</div>
+            <div class="text-muted small">Podés pagar en la sede o por transferencia</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card-ui p-4">
+            <h2 class="h6 fw-bold mb-3">Mis cuotas</h2>
+            <div class="table-responsive">
+                <table class="table table-borderless align-middle mb-0">
+                    <thead class="text-muted small border-bottom">
+                        <tr><th>Período</th><th>Vence</th><th class="text-end">Monto</th><th>Estado</th><th class="text-end"></th></tr>
+                    </thead>
+                    <tbody>
+                        {% for c in cuotas %}
+                        <tr>
+                            <td>{{ c.periodo }}</td>
+                            <td>{{ c.fecha_vencimiento|date:"d/m/Y" }}</td>
+                            <td class="text-end">
+                                ${{ c.monto|floatformat:"2g" }}
+                                {% if c.es_parcial %}<div class="small text-muted">Pagaste ${{ c.total_pagado|floatformat:"2g" }} · Debés ${{ c.saldo|floatformat:"2g" }}</div>{% endif %}
+                                {% for p in c.pagos.all %}<div class="small"><a href="{% url 'socios:pago_comprobante' p.pk %}" class="text-decoration-none"><i class="bi bi-receipt"></i> Comprobante {{ p.fecha_pago|date:"d/m" }}</a></div>{% endfor %}
+                            </td>
+                            <td>{% include "includes/estado_cuota.html" with c=c %}</td>
+                            <td class="text-end">
+                                {% if c.estado != 'PAGADA' %}
+                                <a href="{% url 'socios:portal_avisar_pago' %}?cuota={{ c.pk }}" class="btn btn-sm btn-outline-success text-nowrap"><i class="bi bi-send-check"></i> Avisar pago</a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="5" class="text-center text-muted py-4">Todavía no tenés cuotas.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card-ui p-4">
+            <h2 class="h6 fw-bold mb-3">Mis avisos de pago</h2>
+            {% for a in avisos %}
+            <div class="d-flex justify-content-between align-items-start border-bottom py-2 small">
+                <div>
+                    <div class="fw-medium">{{ a.cuota.periodo }} · ${{ a.monto|floatformat:"2g" }}</div>
+                    <div class="text-muted">Transferido el {{ a.fecha_transferencia|date:"d/m/Y" }}</div>
+                </div>
+                {% if a.estado == 'CONFIRMADO' %}<span class="badge text-bg-success">Confirmado</span>
+                {% elif a.estado == 'RECHAZADO' %}<span class="badge text-bg-danger">Rechazado</span>
+                {% else %}<span class="badge text-bg-warning">En revisión</span>{% endif %}
+            </div>
+            {% empty %}
+            <p class="text-muted small mb-0">Si pagaste por transferencia, avisanos desde "Avisar que transferí" y lo confirmamos.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

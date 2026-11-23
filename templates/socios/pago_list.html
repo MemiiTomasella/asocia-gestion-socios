@@ -7,7 +7,7 @@
     <h1 class="h3 mb-0">Pagos registrados</h1>
     <p class="text-muted mb-0">{{ paginator.count }} pago{{ paginator.count|pluralize }} · Total: <strong>${{ total|floatformat:2 }}</strong></p>
   </div>
-  <a href="{% url 'socios:cuota_list' %}?estado=PENDIENTE" class="btn btn-success"><i class="bi bi-cash"></i> Cobrar cuotas</a>
+  {% if puede_cobrar %}<a href="{% url 'socios:cuota_list' %}?estado=PENDIENTE" class="btn btn-success"><i class="bi bi-cash"></i> Cobrar cuotas</a>{% endif %}
 </div>
 
 <form method="get" class="card card-body shadow-sm mb-3">

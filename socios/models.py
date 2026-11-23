@@ -3,6 +3,7 @@ import re
 from datetime import timedelta
 from decimal import Decimal
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models
@@ -80,6 +81,11 @@ class Socio(models.Model):
     cargo = models.CharField(
         "Cargo en la comisión directiva", max_length=20, choices=Cargo.choices, blank=True,
         help_text="Opcional. Dejalo vacío si no integra la comisión directiva.",
+    )
+    # Usuario con el que el socio entra a su portal (lo crea Secretaría desde la ficha)
+    usuario = models.OneToOneField(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="socio", verbose_name="Usuario del portal",
     )
 
     class Meta:
@@ -296,3 +302,34 @@ def crear_cuota_inicial_socio(sender, instance, created, **kwargs):
                 "fecha_vencimiento": vencimiento,
             }
         )
+
+
+class AvisoPago(models.Model):
+    """El socio avisa desde su portal que transfirió. Tesorería o Secretaría lo revisa:
+    si lo confirma se crea el Pago (con su comprobante); si no, se rechaza."""
+
+    class Estado(models.TextChoices):
+        PENDIENTE = "PENDIENTE", "Pendiente de revisión"
+        CONFIRMADO = "CONFIRMADO", "Confirmado"
+        RECHAZADO = "RECHAZADO", "Rechazado"
+
+    cuota = models.ForeignKey(Cuota, on_delete=models.PROTECT, related_name="avisos", verbose_name="Cuota")
+    monto = models.DecimalField("Monto transferido", max_digits=10, decimal_places=2,
+                                validators=[MinValueValidator(MONTO_MINIMO)])
+    fecha_transferencia = models.DateField("Fecha de la transferencia", default=timezone.localdate)
+    numero_operacion = models.CharField("N° de operación o comprobante", max_length=60)
+    comentario = models.CharField("Comentario", max_length=200, blank=True)
+    estado = models.CharField("Estado", max_length=12, choices=Estado.choices, default=Estado.PENDIENTE)
+    creado = models.DateTimeField("Enviado", auto_now_add=True)
+    revisado_por = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
+                                     blank=True, related_name="+", verbose_name="Revisado por")
+    pago = models.OneToOneField(Pago, on_delete=models.SET_NULL, null=True, blank=True,
+                                related_name="aviso", verbose_name="Pago generado")
+
+    class Meta:
+        verbose_name = "aviso de pago"
+        verbose_name_plural = "avisos de pago"
+        ordering = ["-creado"]
+
+    def __str__(self):
+        return f"Aviso ${self.monto} - {self.cuota} ({self.get_estado_display()})"

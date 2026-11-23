@@ -7,10 +7,12 @@
     <h1 class="h3 mb-0">Cuotas</h1>
     <p class="text-muted mb-0">{{ paginator.count }} resultado{{ paginator.count|pluralize }}</p>
   </div>
+  {% if puede_cobrar %}
   <div class="d-flex gap-2">
     <a href="{% url 'socios:cuotas_generar' %}" class="btn btn-outline-success"><i class="bi bi-calendar-plus"></i> Generar cuotas del mes</a>
     <a href="{% url 'socios:cuota_create' %}" class="btn btn-success"><i class="bi bi-plus-lg"></i> Nueva cuota</a>
   </div>
+  {% endif %}
 </div>
 
 <form method="get" class="card card-body shadow-sm mb-3">
@@ -80,7 +82,7 @@
             {% include "includes/estado_cuota.html" with c=c %}
           </td>
           <td class="text-end">
-            {% if c.estado != 'PAGADA' %}
+            {% if c.estado != 'PAGADA' and puede_cobrar %}
             <a href="{% url 'socios:pago_registrar' c.pk %}" class="btn btn-sm btn-success"><i class="bi bi-cash"></i> {% if c.es_parcial %}Cobrar saldo{% else %}Cobrar{% endif %}</a>
             {% endif %}
           </td>

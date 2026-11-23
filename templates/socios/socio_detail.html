@@ -28,6 +28,7 @@
           <dt class="col-5">Dirección</dt><dd class="col-7">{{ socio.direccion|default:"—" }}</dd>
           <dt class="col-5">Fecha de alta</dt><dd class="col-7">{{ socio.fecha_alta|date:"d/m/Y" }}</dd>
         </dl>
+        {% if puede_gestionar_socios %}
         <div class="d-flex flex-wrap gap-2">
           <a href="{% url 'socios:socio_update' socio.pk %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil"></i> Editar</a>
           {% if socio.esta_activo %}
@@ -43,6 +44,21 @@
           </form>
           {% endif %}
         </div>
+
+        <!-- Acceso al portal del socio -->
+        <div class="border-top mt-3 pt-3">
+          <div class="small text-muted mb-2"><i class="bi bi-person-vcard"></i> Portal del socio:
+            {% if socio.usuario %}<strong class="text-success">activo</strong> (usuario {{ socio.usuario.username }}){% else %}sin acceso{% endif %}
+          </div>
+          <form method="post" action="{% url 'socios:socio_acceso_portal' socio.pk %}"
+                data-confirm="{% if socio.usuario %}¿Generar una contraseña nueva para {{ socio.nombre_completo }}? La anterior deja de funcionar.{% else %}¿Crear el acceso al portal para {{ socio.nombre_completo }}?{% endif %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-secondary btn-sm">
+              <i class="bi bi-key"></i> {% if socio.usuario %}Restablecer contraseña{% else %}Crear acceso al portal{% endif %}
+            </button>
+          </form>
+        </div>
+        {% endif %}
       </div>
     </div>
   </div>
@@ -100,7 +116,7 @@
                 {% include "includes/estado_cuota.html" with c=c %}
               </td>
               <td class="text-end">
-                {% if c.estado != 'PAGADA' %}
+                {% if c.estado != 'PAGADA' and puede_cobrar %}
                 <a href="{% url 'socios:pago_registrar' c.pk %}" class="btn btn-sm btn-success"><i class="bi bi-cash"></i> {% if c.es_parcial %}Cobrar saldo{% else %}Cobrar{% endif %}</a>
                 {% endif %}
               </td>

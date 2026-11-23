@@ -10,29 +10,31 @@
   <div class="d-flex gap-2">
     <!-- Exporta el padrón con los mismos filtros que están aplicados en pantalla -->
     <a href="?{% if querystring %}{{ querystring }}&{% endif %}formato=csv" class="btn btn-outline-secondary"><i class="bi bi-filetype-csv"></i> Exportar a Excel</a>
-    <a href="{% url 'socios:socio_create' %}" class="btn btn-success"><i class="bi bi-person-plus"></i> Nuevo socio</a>
+    {% if puede_gestionar_socios %}<a href="{% url 'socios:socio_create' %}" class="btn btn-success"><i class="bi bi-person-plus"></i> Nuevo socio</a>{% endif %}
   </div>
 </div>
 
 <!-- Buscador y filtros -->
 <form method="get" class="card card-body shadow-sm mb-3">
   <div class="row g-2 align-items-end">
-    <div class="col-md-5">
+    <div class="col-lg-4">
       <label for="q" class="form-label">Buscar</label>
       <div class="input-group">
         <span class="input-group-text"><i class="bi bi-search"></i></span>
         <input type="search" id="q" name="q" value="{{ q }}" class="form-control" placeholder="DNI, apellido, nombre o email">
       </div>
     </div>
-    <div class="col-md-2">
+    <div class="col-sm-4 col-lg-2">
       <label for="estado" class="form-label">Estado</label>
       <select id="estado" name="estado" class="form-select" data-autosubmit>
         <option value="">Todos</option>
         <option value="ACTIVO" {% if estado == 'ACTIVO' %}selected{% endif %}>Activos</option>
+        <option value="AL_DIA" {% if estado == 'AL_DIA' %}selected{% endif %}>Al día</option>
+        <option value="MOROSO" {% if estado == 'MOROSO' %}selected{% endif %}>Morosos</option>
         <option value="INACTIVO" {% if estado == 'INACTIVO' %}selected{% endif %}>Inactivos</option>
       </select>
     </div>
-    <div class="col-md-3">
+    <div class="col-sm-4 col-lg-2">
       <label for="categoria" class="form-label">Categoría</label>
       <select id="categoria" name="categoria" class="form-select" data-autosubmit>
         <option value="">Todas</option>
@@ -41,18 +43,20 @@
         {% endfor %}
       </select>
     </div>
-    <div class="col-md-2 d-flex gap-2">
+    <div class="col-sm-4 col-lg-2">
+      <label for="cargo" class="form-label">Cargo</label>
+      <select id="cargo" name="cargo" class="form-select" data-autosubmit>
+        <option value="">Todos</option>
+        <option value="DIRECTIVA" {% if cargo == 'DIRECTIVA' %}selected{% endif %}>Comisión directiva</option>
+        {% for valor, etiqueta in cargos %}
+        <option value="{{ valor }}" {% if cargo == valor %}selected{% endif %}>{{ etiqueta }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-lg-2 d-flex gap-2">
       <button type="submit" class="btn btn-dark flex-fill">Buscar</button>
       <a href="{% url 'socios:socio_list' %}" class="btn btn-outline-secondary" title="Limpiar filtros"><i class="bi bi-x-lg"></i></a>
     </div>
-  </div>
-  <div class="form-check form-switch mt-3">
-    <input class="form-check-input" type="checkbox" role="switch" id="moroso" name="moroso" value="1" {% if moroso %}checked{% endif %} data-autosubmit>
-    <label class="form-check-label" for="moroso">Mostrar solo morosos (con cuotas vencidas)</label>
-  </div>
-  <div class="form-check form-switch mt-2">
-    <input class="form-check-input" type="checkbox" role="switch" id="directiva" name="directiva" value="1" {% if directiva %}checked{% endif %} data-autosubmit>
-    <label class="form-check-label" for="directiva">Mostrar solo la comisión directiva</label>
   </div>
 </form>
 
@@ -96,6 +100,7 @@
           </td>
           <td class="text-end text-nowrap">
             <a href="{% url 'socios:socio_detail' s.pk %}" class="btn btn-sm btn-outline-secondary" title="Ver ficha"><i class="bi bi-eye"></i></a>
+            {% if puede_gestionar_socios %}
             <a href="{% url 'socios:socio_update' s.pk %}" class="btn btn-sm btn-outline-primary" title="Editar"><i class="bi bi-pencil"></i></a>
             {% if s.esta_activo %}
             <form method="post" action="{% url 'socios:socio_baja' s.pk %}" class="d-inline" data-confirm="¿Dar de baja a {{ s.nombre_completo }}? Podrás reactivarlo más adelante.">
@@ -107,6 +112,7 @@
               {% csrf_token %}
               <button type="submit" class="btn btn-sm btn-outline-success" title="Reactivar"><i class="bi bi-person-check"></i></button>
             </form>
+            {% endif %}
             {% endif %}
           </td>
         </tr>

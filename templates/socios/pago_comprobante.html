@@ -17,8 +17,12 @@
     <button type="button" class="btn btn-success" onclick="window.print()">
         <i class="bi bi-printer"></i> Imprimir o guardar en PDF
     </button>
+    {% if es_socio_portal %}
+    <a href="{% url 'socios:portal' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Volver a mi cuenta</a>
+    {% else %}
     <a href="{% url 'socios:socio_detail' socio.pk %}" class="btn btn-outline-secondary"><i class="bi bi-person"></i> Ver ficha del socio</a>
     <a href="{% url 'socios:cuota_list' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Volver a cuotas</a>
+    {% endif %}
 </div>
 
 <div class="card-ui comprobante p-4 p-md-5 mx-auto">
@@ -72,6 +76,6 @@
         </div>
     </div>
 
-    <p class="text-muted small mt-4 mb-0">Recibido por: {{ request.user.get_full_name|default:request.user.username }} · Emitido con Asocia</p>
+    <p class="text-muted small mt-4 mb-0">Emitido por {{ institucion_nombre }} · Sistema Asocia{% if pago.aviso %} · Pago por transferencia informado por el socio (op. {{ pago.aviso.numero_operacion }}){% endif %}</p>
 </div>
 {% endblock %}
