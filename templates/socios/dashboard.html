@@ -14,8 +14,8 @@
     <div class="col-md-3">
         <div class="card-ui p-4">
             <div class="text-muted small fw-medium text-uppercase tracking-wider mb-1">Total de socios</div>
-            <div class="fs-2 fw-bold text-dark mb-1">{{ total_socios }}</div>
-            <div class="text-muted small"><span class="text-success fw-semibold">{{ socios_activos }}</span> activos · 0 inactivos</div>
+            <div class="text-muted small"><span class="text-success fw-semibold">{{ socios_activos }}</span> activos · {{ socios_inactivos }} inactivos</div>
+            <div class="text-muted small"><span class="text-success fw-semibold">{{ socios_inactivos }} inactivos</div>
         </div>
     </div>
     
@@ -23,7 +23,7 @@
     <div class="col-md-3">
         <div class="card-ui p-4">
             <div class="text-muted small fw-medium text-uppercase tracking-wider mb-1">Socios al día</div>
-            <div class="fs-2 fw-bold text-success mb-1">{{ socios_al_dia|default:"1" }}</div>
+            <div class="fs-2 fw-bold text-success mb-1">{{ al_dia }}</div>
             <div class="text-muted small">Sin cuotas vencidas</div>
         </div>
     </div>
@@ -32,16 +32,16 @@
     <div class="col-md-3">
         <div class="card-ui p-4">
             <div class="text-muted small fw-medium text-uppercase tracking-wider mb-1">Morosos</div>
-            <div class="fs-2 fw-bold text-danger mb-1">{{ cuotas_pendientes }}</div>
-            <div class="text-muted small">Cuotas vencidas pendientes</div>
+            <div class="fs-2 fw-bold text-danger mb-1">{{ morosos }}</div>
+            <div class="text-muted small">{{ cuotas_vencidas }} cuota{{ cuotas_vencidas|pluralize }} vencida{{ cuotas_vencidas|pluralize }}</div>
         </div>
     </div>
 
     <!-- Recaudado -->
     <div class="col-md-3">
         <div class="card-ui p-4">
-            <div class="text-muted small fw-medium text-uppercase tracking-wider mb-1">Recaudado (Nov)</div>
-            <div class="fs-2 fw-bold text-dark mb-1">$25.000,00</div>
+            <div class="text-muted small fw-medium text-uppercase tracking-wider mb-1">Recaudado ({{ mes_actual }})</div>
+            <div class="fs-2 fw-bold text-dark mb-1">${{ recaudado_mes|floatformat:"2g" }}</div>
             <div class="text-muted small">Ingresos del período</div>
         </div>
     </div>
@@ -73,16 +73,15 @@
                         </tr>
                     </thead>
                     <tbody>
+                        {% for socio in top_morosos %}
                         <tr>
-                            <td class="fw-medium text-dark">Tomasella, Melina Milagros</td>
-                            <td><span class="badge bg-light text-secondary border">socio</span></td>
-                            <td class="text-end"><span class="badge bg-danger-subtle text-danger px-2 py-1 rounded-pill">1 vencida</span></td>
+                           <td class="fw-medium text-dark">{{ socio.nombre_completo }}</td>
+                           <td><span class="badge bg-light text-secondary border">{{ socio.categoria.nombre }}</span></td>
+                           <td class="text-end"><span class="badge bg-danger-subtle text-danger px-2 py-1 rounded-pill">{{ socio.cuotas_vencidas }} vencida{{ socio.cuotas_vencidas|pluralize }}</span></td>
                         </tr>
-                        <tr>
-                            <td class="fw-medium text-dark">Tomasella, Osvaldo Guillermo</td>
-                            <td><span class="badge bg-light text-secondary border">socio</span></td>
-                            <td class="text-end"><span class="badge bg-danger-subtle text-danger px-2 py-1 rounded-pill">1 vencida</span></td>
-                        </tr>
+                        {% empty %}
+<tr><td colspan="3" class="text-center text-muted small py-3">No hay socios con cuotas vencidas.</td></tr>
+                        {% endfor %}
                     </tbody>
                 </table>
             </div>
@@ -104,18 +103,16 @@
                         </tr>
                     </thead>
                     <tbody>
+                        {% for pago in ultimos_pagos %}
                         <tr>
-                            <td class="small text-muted">15/11/2026</td>
-                            <td class="fw-medium text-dark">Osvaldo Guillermo</td>
-                            <td class="small">Noviembre 2026</td>
-                            <td class="fw-bold text-success text-end">$5.000,00</td>
+                            <td class="small text-muted">{{ pago.fecha_pago|date:"d/m/Y" }}</td>
+                            <td class="fw-medium text-dark">{{ pago.cuota.socio.nombre_completo }}</td>
+                            <td class="small">{{ pago.cuota.periodo }}</td>
+                            <td class="fw-bold text-success text-end">${{ pago.monto_pagado|floatformat:"2g" }}</td>
                         </tr>
-                        <tr>
-                            <td class="small text-muted">15/11/2026</td>
-                            <td class="fw-medium text-dark">Diana del Carmen</td>
-                            <td class="small">Octubre 2026</td>
-                            <td class="fw-bold text-success text-end">$5.000,00</td>
-                        </tr>
+                        {% empty %}
+    <tr><td colspan="4" class="text-center text-muted small py-3">Todavía no hay pagos registrados.</td></tr>
+    {% endfor %}
                     </tbody>
                 </table>
             </div>
