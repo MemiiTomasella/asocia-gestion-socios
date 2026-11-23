@@ -93,7 +93,7 @@ class VistasTests(TestCase):
 
     def test_vistas_requieren_login(self):
         self.client.logout()
-        for nombre in ["dashboard", "socio_list", "cuota_list", "pago_list"]:
+        for nombre in ["dashboard", "socio_list", "cuota_list", "pago_list", "informes"]:
             resp = self.client.get(reverse(f"socios:{nombre}"))
             self.assertEqual(resp.status_code, 302, nombre)
             self.assertIn("/accounts/login/", resp["Location"])
@@ -238,3 +238,39 @@ class VistasTests(TestCase):
         listado = self.client.get(reverse("socios:socio_list"), {"moroso": "1"})
         self.assertContains(listado, "Rossi")
         self.assertNotContains(listado, "Ferrari")
+
+
+class InformesTests(TestCase):
+    def setUp(self):
+        get_user_model().objects.create_user("admin", password="clave-segura-123")
+        self.client.login(username="admin", password="clave-segura-123")
+        self.url = reverse("socios:informes")
+
+    def test_agrupa_altas_y_recaudacion_del_periodo_actual(self):
+        socio = crear_socio()  # fecha de alta: hoy
+        Pago.objects.create(cuota=socio.cuotas.get(), monto_pagado=Decimal("2000"))
+        resp = self.client.get(self.url, {"agrupar": "mes"})
+        actual = resp.context["filas"][-1]  # el último período es el mes en curso
+        self.assertEqual(actual["altas"], 1)
+        self.assertEqual(actual["recaudado"], Decimal("2000"))
+        self.assertEqual(resp.context["total_recaudado"], Decimal("2000"))
+
+    def test_cantidad_de_periodos_segun_agrupacion(self):
+        for agrupar, cantidad in [("semana", 12), ("mes", 12), ("anio", 5), ("cualquiera", 12)]:
+            resp = self.client.get(self.url, {"agrupar": agrupar})
+            self.assertEqual(resp.status_code, 200)
+            self.assertEqual(len(resp.context["filas"]), cantidad, agrupar)
+
+    def test_pagos_fuera_del_rango_no_se_cuentan(self):
+        socio = crear_socio()
+        viejo = Cuota.objects.create(socio=socio, mes=1, anio=2020, monto=Decimal("5000"),
+                                     fecha_vencimiento="2020-01-10")
+        Pago.objects.create(cuota=viejo, monto_pagado=Decimal("5000"), fecha_pago="2020-01-05")
+        resp = self.client.get(self.url, {"agrupar": "mes"})
+        self.assertEqual(resp.context["total_recaudado"], Decimal("0"))
+
+    def test_exportar_csv(self):
+        resp = self.client.get(self.url, {"agrupar": "mes", "formato": "csv"})
+        self.assertEqual(resp["Content-Type"], "text/csv; charset=utf-8")
+        self.assertIn("attachment", resp["Content-Disposition"])
+        self.assertIn("Período;Altas de socios;Recaudado", resp.content.decode("utf-8-sig"))

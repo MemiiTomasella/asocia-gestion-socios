@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}Informes | Asocia{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+    <div>
+        <h1 class="fw-bold mb-1">Informes</h1>
+        <p class="text-secondary mb-0">Altas de socios y recaudación · {{ titulo|lower }}</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        {# Cada botón recarga la página con ?agrupar=... (el filtro viaja en la URL) #}
+        <div class="btn-group" role="group" aria-label="Agrupar por">
+            <a href="?agrupar=semana" class="btn {% if agrupacion == 'semana' %}btn-success{% else %}btn-outline-success{% endif %}">Semana</a>
+            <a href="?agrupar=mes" class="btn {% if agrupacion == 'mes' %}btn-success{% else %}btn-outline-success{% endif %}">Mes</a>
+            <a href="?agrupar=anio" class="btn {% if agrupacion == 'anio' %}btn-success{% else %}btn-outline-success{% endif %}">Año</a>
+        </div>
+        <a href="?agrupar={{ agrupacion }}&formato=csv" class="btn btn-outline-secondary">
+            <i class="bi bi-filetype-csv"></i> Exportar a Excel
+        </a>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="card-ui p-4 h-100">
+            <div class="text-uppercase text-secondary small fw-medium mb-2">Socios nuevos</div>
+            <div class="fs-2 fw-bold mb-1">{{ total_altas }}</div>
+            <div class="text-muted small">{{ titulo }}</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card-ui p-4 h-100">
+            <div class="text-uppercase text-secondary small fw-medium mb-2">Recaudado</div>
+            <div class="fs-2 fw-bold text-success mb-1">${{ total_recaudado|floatformat:"2g" }}</div>
+            <div class="text-muted small">{{ titulo }}</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card-ui p-4 h-100">
+            <div class="text-uppercase text-secondary small fw-medium mb-2">Promedio por período</div>
+            <div class="fs-2 fw-bold mb-1">${{ promedio_recaudado|floatformat:"2g" }}</div>
+            <div class="text-muted small">Recaudación media</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card-ui p-4 h-100">
+            <div class="text-uppercase text-secondary small fw-medium mb-2">Socios activos hoy</div>
+            <div class="fs-2 fw-bold mb-1">{{ socios_activos }}</div>
+            <div class="text-muted small">Padrón vigente</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-lg-7">
+        <div class="card-ui p-4 h-100">
+            <h5 class="fw-bold fs-6 mb-3">Recaudación</h5>
+            <div style="position: relative; height: 280px;"><canvas id="graficoRecaudacion" aria-label="Gráfico de recaudación por período" role="img"></canvas></div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card-ui p-4 h-100">
+            <h5 class="fw-bold fs-6 mb-3">Altas de socios</h5>
+            <div style="position: relative; height: 280px;"><canvas id="graficoAltas" aria-label="Gráfico de altas de socios por período" role="img"></canvas></div>
+        </div>
+    </div>
+</div>
+
+<div class="card-ui p-4">
+    <h5 class="fw-bold fs-6 mb-3">Detalle por período</h5>
+    <div class="table-responsive">
+        <table class="table table-borderless align-middle mb-0">
+            <thead class="text-muted small border-bottom">
+                <tr>
+                    <th class="pb-2">Período</th>
+                    <th class="pb-2 text-end">Altas de socios</th>
+                    <th class="pb-2 text-end">Recaudado</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for fila in filas reversed %}
+                <tr>
+                    <td>{{ fila.etiqueta }}</td>
+                    <td class="text-end">{{ fila.altas }}</td>
+                    <td class="text-end fw-medium">${{ fila.recaudado|floatformat:"2g" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{# json_script escribe los datos como JSON dentro de una etiqueta <script> de forma segura #}
+{{ datos_grafico|json_script:"datos-grafico" }}
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+    const datos = JSON.parse(document.getElementById("datos-grafico").textContent);
+    const estilo = getComputedStyle(document.body);
+    Chart.defaults.color = estilo.color;          // respeta el modo claro/oscuro
+    Chart.defaults.font.family = estilo.fontFamily;
+
+    const pesos = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
+
+    new Chart(document.getElementById("graficoRecaudacion"), {
+        type: "bar",
+        data: {
+            labels: datos.etiquetas,
+            datasets: [{ label: "Recaudado", data: datos.recaudado, backgroundColor: "#1F6B4F", borderRadius: 6 }],
+        },
+        options: {
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => pesos.format(c.parsed.y) } } },
+            scales: { y: { beginAtZero: true, ticks: { callback: (v) => pesos.format(v) } }, x: { grid: { display: false } } },
+        },
+    });
+
+    new Chart(document.getElementById("graficoAltas"), {
+        type: "line",
+        data: {
+            labels: datos.etiquetas,
+            datasets: [{ label: "Socios nuevos", data: datos.altas, borderColor: "#3FB37F", backgroundColor: "#3FB37F", tension: 0.3, pointRadius: 4 }],
+        },
+        options: {
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { grid: { display: false } } },
+        },
+    });
+</script>
+{% endblock %}

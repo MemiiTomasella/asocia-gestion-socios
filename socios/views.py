@@ -1,5 +1,7 @@
 """Vistas: dashboard, CRUD de socios, cuotas y pagos."""
-from datetime import date
+import csv
+from datetime import date, timedelta
+from decimal import Decimal
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -7,6 +9,8 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.messages.views import SuccessMessageMixin
 from django.db import transaction
 from django.db.models import Count, Q, Sum
+from django.db.models.functions import TruncMonth, TruncWeek, TruncYear
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.utils import timezone
@@ -125,7 +129,9 @@ class SocioListView(LoginRequiredMixin, QuerystringMixin, ListView):
             qs = qs.filter(categoria_id=categoria)
         if params.get("moroso") == "1":
             qs = qs.filter(estado=Socio.Estado.ACTIVO, cuotas_vencidas__gt=0)
-        return qs
+        # Con annotate(Count(...)) Django agrupa (GROUP BY) y deja de aplicar el
+        # orden del Meta del modelo: lo indicamos explícito para que la paginación sea estable.
+        return qs.order_by("apellido", "nombre")
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -400,3 +406,108 @@ class PagoListView(LoginRequiredMixin, QuerystringMixin, ListView):
             }
         )
         return context
+
+
+# ---------------------------------------------------------------------------
+# Informes: altas de socios y recaudación agrupadas por semana, mes o año
+# ---------------------------------------------------------------------------
+AGRUPACIONES = {
+    # clave: (función SQL que "redondea" la fecha al inicio del período, cantidad de períodos, título)
+    "semana": (TruncWeek, 12, "Últimas 12 semanas"),
+    "mes": (TruncMonth, 12, "Últimos 12 meses"),
+    "anio": (TruncYear, 5, "Últimos 5 años"),
+}
+
+
+def _inicios_de_periodo(agrupacion, cantidad, hoy):
+    """Fecha de inicio de cada período a mostrar, de la más vieja a la más nueva."""
+    if agrupacion == "semana":
+        lunes = hoy - timedelta(days=hoy.weekday())
+        return [lunes - timedelta(weeks=i) for i in range(cantidad - 1, -1, -1)]
+    if agrupacion == "mes":
+        inicios, anio, mes = [], hoy.year, hoy.month
+        for _ in range(cantidad):
+            inicios.append(date(anio, mes, 1))
+            mes, anio = (12, anio - 1) if mes == 1 else (mes - 1, anio)
+        return inicios[::-1]
+    return [date(hoy.year - i, 1, 1) for i in range(cantidad - 1, -1, -1)]
+
+
+def _etiqueta(agrupacion, inicio):
+    if agrupacion == "semana":
+        return f"Sem. {inicio:%d/%m}"
+    if agrupacion == "mes":
+        return f"{MESES[inicio.month - 1][1][:3]} {inicio.year}"
+    return str(inicio.year)
+
+
+def _como_fecha(valor):
+    """Según el motor, Trunc devuelve date o datetime: lo normalizamos a date."""
+    return valor.date() if hasattr(valor, "hour") else valor
+
+
+@login_required
+def informes(request):
+    agrupacion = request.GET.get("agrupar", "mes")
+    if agrupacion not in AGRUPACIONES:
+        agrupacion = "mes"
+    truncar, cantidad, titulo = AGRUPACIONES[agrupacion]
+    hoy = timezone.localdate()
+    inicios = _inicios_de_periodo(agrupacion, cantidad, hoy)
+    desde = inicios[0]
+
+    # SQL equivalente: SELECT DATE_TRUNC(...) AS periodo, COUNT(id) ... GROUP BY periodo
+    altas = (
+        Socio.objects.filter(fecha_alta__range=(desde, hoy))
+        .annotate(periodo=truncar("fecha_alta"))
+        .values("periodo")
+        .annotate(total=Count("id"))
+        .order_by("periodo")
+    )
+    recaudacion = (
+        Pago.objects.filter(fecha_pago__range=(desde, hoy))
+        .annotate(periodo=truncar("fecha_pago"))
+        .values("periodo")
+        .annotate(total=Sum("monto_pagado"))
+        .order_by("periodo")
+    )
+    altas_por_periodo = {_como_fecha(f["periodo"]): f["total"] for f in altas}
+    recaudado_por_periodo = {_como_fecha(f["periodo"]): f["total"] for f in recaudacion}
+
+    # Completamos con 0 los períodos sin movimientos, para que el gráfico no tenga "huecos"
+    filas = [
+        {
+            "etiqueta": _etiqueta(agrupacion, inicio),
+            "altas": altas_por_periodo.get(inicio, 0),
+            "recaudado": recaudado_por_periodo.get(inicio) or Decimal("0"),
+        }
+        for inicio in inicios
+    ]
+
+    if request.GET.get("formato") == "csv":
+        respuesta = HttpResponse(content_type="text/csv; charset=utf-8")
+        respuesta["Content-Disposition"] = f'attachment; filename="informe_{agrupacion}_{hoy:%Y%m%d}.csv"'
+        respuesta.write("\ufeff")  # BOM: para que Excel muestre bien los acentos
+        escritor = csv.writer(respuesta, delimiter=";")  # ";" es el separador del Excel en español
+        escritor.writerow(["Período", "Altas de socios", "Recaudado"])
+        for fila in filas:
+            escritor.writerow([fila["etiqueta"], fila["altas"], str(fila["recaudado"]).replace(".", ",")])
+        return respuesta
+
+    total_recaudado = sum((f["recaudado"] for f in filas), Decimal("0"))
+    contexto = {
+        "agrupacion": agrupacion,
+        "titulo": titulo,
+        "filas": filas,
+        "total_altas": sum(f["altas"] for f in filas),
+        "total_recaudado": total_recaudado,
+        "promedio_recaudado": total_recaudado / len(filas),
+        "socios_activos": Socio.objects.filter(estado=Socio.Estado.ACTIVO).count(),
+        # Datos para Chart.js: se pasan con json_script (seguro ante inyección de código)
+        "datos_grafico": {
+            "etiquetas": [f["etiqueta"] for f in filas],
+            "altas": [f["altas"] for f in filas],
+            "recaudado": [float(f["recaudado"]) for f in filas],
+        },
+    }
+    return render(request, "socios/informes.html", contexto)
