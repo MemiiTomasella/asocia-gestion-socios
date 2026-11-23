@@ -274,3 +274,18 @@ class InformesTests(TestCase):
         self.assertEqual(resp["Content-Type"], "text/csv; charset=utf-8")
         self.assertIn("attachment", resp["Content-Disposition"])
         self.assertIn("Período;Altas de socios;Recaudado", resp.content.decode("utf-8-sig"))
+
+
+class InterfazTests(TestCase):
+    def test_login_muestra_la_marca_sin_menu_lateral(self):
+        resp = self.client.get(reverse("login"))
+        self.assertContains(resp, "Asocia")
+        self.assertNotContains(resp, 'id="sidebar"')
+
+    def test_nombre_de_institucion_configurable(self):
+        get_user_model().objects.create_user("admin", password="clave-segura-123")
+        self.client.login(username="admin", password="clave-segura-123")
+        with self.settings(INSTITUCION_NOMBRE="Club Social Ejemplo"):
+            resp = self.client.get(reverse("socios:dashboard"))
+        self.assertContains(resp, "Club Social Ejemplo")
+        self.assertContains(resp, 'id="sidebar"')

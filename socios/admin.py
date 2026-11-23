@@ -4,7 +4,7 @@ from django.db.models import Count
 
 from .models import Categoria, Cuota, Pago, Socio
 
-admin.site.site_header = "Sociedad Italiana de Goya"
+admin.site.site_header = "Asocia · Administración"
 admin.site.site_title = "Gestión de socios"
 admin.site.index_title = "Panel de administración"
 

@@ -1,48 +1,60 @@
 {% extends 'base.html' %}
 
-{% block title %}Dashboard | Sociedad Italiana de Goya{% endblock %}
+{% block title %}Panel | Asocia{% endblock %}
 
 {% block content %}
 <div class="mb-4">
-    <h2 class="fw-bold text-dark mb-1">Panel principal</h2>
-    <p class="text-muted small">Resumen actualizado de la situación de socios y cobranzas.</p>
+    <h2 class="fw-bold text-dark mb-1">Hola, {{ request.user.first_name|default:request.user.username|title }} 👋</h2>
+    <p class="text-muted small">Este es el resumen de socios y cobranzas de hoy.</p>
 </div>
 
-<!-- Tarjetas de Estadísticas Estilo UI Minimalista -->
+<!-- Tarjetas de métricas: la de recaudación va destacada (rellena de verde) -->
 <div class="row g-4 mb-4">
-    <!-- Total Socios -->
-    <div class="col-md-3">
-        <div class="card-ui p-4">
-            <div class="text-muted small fw-medium text-uppercase tracking-wider mb-1">Total de socios</div>
-            <div class="text-muted small"><span class="text-success fw-semibold">{{ socios_activos }}</span> activos · {{ socios_inactivos }} inactivos</div>
-            <div class="text-muted small"><span class="text-success fw-semibold">{{ socios_inactivos }} inactivos</div>
+    <!-- Recaudado (destacada) -->
+    <div class="col-sm-6 col-xl-3">
+        <div class="card-ui card-destacada p-4 h-100">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div class="text-secondary small fw-medium text-uppercase">Recaudado · {{ mes_actual }}</div>
+                <div class="icono-metrica icono-claro"><i class="bi bi-cash-stack"></i></div>
+            </div>
+            <div class="fs-2 fw-bold mb-1">${{ recaudado_mes|floatformat:"2g" }}</div>
+            <div class="text-muted small">Ingresos del mes en curso</div>
         </div>
     </div>
-    
-    <!-- Socios al Día -->
-    <div class="col-md-3">
-        <div class="card-ui p-4">
-            <div class="text-muted small fw-medium text-uppercase tracking-wider mb-1">Socios al día</div>
+
+    <!-- Total de socios -->
+    <div class="col-sm-6 col-xl-3">
+        <div class="card-ui p-4 h-100">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div class="text-muted small fw-medium text-uppercase">Total de socios</div>
+                <div class="icono-metrica icono-verde"><i class="bi bi-people-fill"></i></div>
+            </div>
+            <div class="fs-2 fw-bold mb-1">{{ total_socios }}</div>
+            <div class="text-muted small"><span class="text-success fw-semibold">{{ socios_activos }}</span> activos · {{ socios_inactivos }} inactivos</div>
+        </div>
+    </div>
+
+    <!-- Socios al día -->
+    <div class="col-sm-6 col-xl-3">
+        <div class="card-ui p-4 h-100">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div class="text-muted small fw-medium text-uppercase">Socios al día</div>
+                <div class="icono-metrica icono-verde"><i class="bi bi-patch-check-fill"></i></div>
+            </div>
             <div class="fs-2 fw-bold text-success mb-1">{{ al_dia }}</div>
             <div class="text-muted small">Sin cuotas vencidas</div>
         </div>
     </div>
 
     <!-- Morosos -->
-    <div class="col-md-3">
-        <div class="card-ui p-4">
-            <div class="text-muted small fw-medium text-uppercase tracking-wider mb-1">Morosos</div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card-ui p-4 h-100">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div class="text-muted small fw-medium text-uppercase">Morosos</div>
+                <div class="icono-metrica icono-rojo"><i class="bi bi-exclamation-circle-fill"></i></div>
+            </div>
             <div class="fs-2 fw-bold text-danger mb-1">{{ morosos }}</div>
             <div class="text-muted small">{{ cuotas_vencidas }} cuota{{ cuotas_vencidas|pluralize }} vencida{{ cuotas_vencidas|pluralize }}</div>
-        </div>
-    </div>
-
-    <!-- Recaudado -->
-    <div class="col-md-3">
-        <div class="card-ui p-4">
-            <div class="text-muted small fw-medium text-uppercase tracking-wider mb-1">Recaudado ({{ mes_actual }})</div>
-            <div class="fs-2 fw-bold text-dark mb-1">${{ recaudado_mes|floatformat:"2g" }}</div>
-            <div class="text-muted small">Ingresos del período</div>
         </div>
     </div>
 </div>

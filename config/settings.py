@@ -1,6 +1,5 @@
 """
-Configuración del proyecto: Sistema de Gestión de Socios
-Sociedad Italiana de Goya (TFI).
+Configuración del proyecto Asocia: sistema de gestión de socios para clubes y asociaciones (TFI).
 
 Las credenciales y datos sensibles se leen de variables de entorno
 (archivo .env) mediante django-environ.
@@ -66,6 +65,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "socios.context_processors.institucion",
             ],
         },
     },
@@ -136,6 +136,12 @@ STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
 }
+
+# ---------------------------------------------------------------------------
+# Asocia: datos de la institución que usa el sistema
+# ---------------------------------------------------------------------------
+# El mismo código sirve para cualquier club o asociación: solo cambia esta variable.
+INSTITUCION_NOMBRE = env("INSTITUCION_NOMBRE", default="Mi institución")
 
 # Los mensajes de error de Django se muestran con la clase "danger" de Bootstrap
 MESSAGE_TAGS = {message_constants.ERROR: "danger"}

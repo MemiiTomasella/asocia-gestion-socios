@@ -3,12 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Sociedad Italiana de Goya{% endblock %}</title>
+    <title>{% block title %}Asocia{% endblock %}</title>
+    <!-- Favicon: isotipo "A con tilde" en SVG (no necesita archivo aparte) -->
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%231F6B4F'/%3E%3Cpath d='M14 52 L32 12 L50 52' stroke='white' stroke-width='7' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3Cpath d='M22 38 L29 44 L43 31' stroke='%233FB37F' stroke-width='6' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E">
     
-    <!-- Google Fonts: Inter -->
+    <!-- Google Fonts: Plus Jakarta Sans -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- Bootstrap 5 CSS -->
      <script>
@@ -19,17 +21,59 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 
     <style>
+        /* ===== Paleta "Verde institucional" de Asocia ===== */
         :root {
             --sidebar-width: 260px;
             --sidebar-width-collapsed: 80px;
-            --primary-color: #198754;
-            --bg-app: #f8fafc;
+            --primary-color: #1F6B4F;   /* verde principal: botones, activos */
+            --primary-dark: #0F3D2E;    /* verde oscuro: tarjeta destacada, hover */
+            --accent: #3FB37F;          /* acento: el tilde del logo, gráficos */
+            --tint: #E8F5EE;            /* verde muy suave: fondos de íconos y menú activo */
+            --bg-app: #F5F7F6;          /* fondo general */
+            --surface: #ffffff;         /* tarjetas, menú, barra superior */
+            --border-ui: #E3E8E6;
+            --text-main: #1A2421;
+            --text-soft: #6B7A74;
+
+            /* Adaptamos los colores de Bootstrap a la paleta, así todos los
+               .btn-success, .text-success, .badge, etc. usan los mismos tonos */
+            --bs-success: #1F6B4F;  --bs-success-rgb: 31, 107, 79;
+            --bs-danger: #E5484D;   --bs-danger-rgb: 229, 72, 77;
+            --bs-warning: #F5A524;  --bs-warning-rgb: 245, 165, 36;
+            --bs-body-font-family: 'Plus Jakarta Sans', sans-serif;
+            --bs-link-color: #1F6B4F;        --bs-link-color-rgb: 31, 107, 79;
+            --bs-link-hover-color: #0F3D2E;  --bs-link-hover-color-rgb: 15, 61, 46;
         }
 
+        /* Modo oscuro: mismas variables, otros valores */
+        [data-bs-theme="dark"] {
+            --bg-app: #0E1613;
+            --surface: #15201C;
+            --border-ui: #24332D;
+            --text-main: #E6EEEA;
+            --text-soft: #9AAAA3;
+            --tint: #173328;
+            --bs-success: #3FB37F;  --bs-success-rgb: 63, 179, 127;
+            --bs-link-color: #3FB37F;        --bs-link-color-rgb: 63, 179, 127;
+            --bs-link-hover-color: #7ED3AB;  --bs-link-hover-color-rgb: 126, 211, 171;
+        }
+
+        .btn-success {
+            --bs-btn-bg: var(--primary-color); --bs-btn-border-color: var(--primary-color);
+            --bs-btn-hover-bg: var(--primary-dark); --bs-btn-hover-border-color: var(--primary-dark);
+            --bs-btn-active-bg: var(--primary-dark); --bs-btn-active-border-color: var(--primary-dark);
+        }
+        .btn-outline-success {
+            --bs-btn-color: var(--primary-color); --bs-btn-border-color: var(--primary-color);
+            --bs-btn-hover-bg: var(--primary-color); --bs-btn-hover-border-color: var(--primary-color);
+            --bs-btn-active-bg: var(--primary-dark); --bs-btn-active-border-color: var(--primary-dark);
+        }
+        .btn { border-radius: 10px; font-weight: 500; }
+
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Plus Jakarta Sans', sans-serif;
             background-color: var(--bg-app);
-            color: #334155;
+            color: var(--text-main);
             overflow-x: hidden;
         }
 
@@ -40,8 +84,8 @@
             left: 0;
             bottom: 0;
             width: var(--sidebar-width);
-            background: #ffffff;
-            border-right: 1px solid #e2e8f0;
+            background: var(--surface);
+            border-right: 1px solid var(--border-ui);
             z-index: 1000;
             display: flex;
             flex-direction: column;
@@ -52,7 +96,7 @@
         .sidebar-brand {
             font-weight: 700;
             font-size: 1.1rem;
-            color: #0f172a;
+            color: var(--text-main);
             display: flex;
             align-items: center;
             gap: 0.75rem;
@@ -63,8 +107,8 @@
         }
 
         .sidebar-brand .logo-icon {
-            background: #dcfce7;
-            color: var(--primary-color);
+            background: var(--primary-color);
+            color: #fff;
             width: 42px;
             height: 42px;
             display: flex;
@@ -91,7 +135,7 @@
             align-items: center;
             gap: 0.75rem;
             padding: 0.75rem 1rem;
-            color: #64748b;
+            color: var(--text-soft);
             text-decoration: none;
             font-weight: 500;
             border-radius: 10px;
@@ -105,16 +149,21 @@
             flex-shrink: 0;
         }
 
-        .sidebar-menu a:hover, .sidebar-menu a.active {
-            background-color: #f1f5f9;
-            color: #0f172a;
+        .sidebar-menu a:hover {
+            background-color: var(--bg-app);
+            color: var(--text-main);
         }
 
         .sidebar-menu a.active {
-            background-color: #dcfce7;
+            background-color: var(--tint);
             color: var(--primary-color);
             font-weight: 600;
+            box-shadow: inset 3px 0 0 var(--primary-color);  /* barrita a la izquierda del ítem activo */
         }
+        [data-bs-theme="dark"] .sidebar-menu a.active { color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+
+        .brand-texto { display: flex; flex-direction: column; line-height: 1.15; }
+        .brand-texto small { font-size: 0.72rem; font-weight: 500; color: var(--text-soft); }
 
         /* Contenido Principal */
         .main-content {
@@ -128,8 +177,8 @@
         /* Topbar */
         .topbar {
             height: 75px;
-            background: #ffffff;
-            border-bottom: 1px solid #e2e8f0;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border-ui);
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -141,12 +190,12 @@
             width: 38px;
             height: 38px;
             border-radius: 50%;
-            background-color: #f1f5f9;
-            border: 1px solid #e2e8f0;
+            background-color: var(--tint);
+            border: 1px solid var(--border-ui);
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #334155;
+            color: var(--primary-color);
             font-size: 1.1rem;
             flex-shrink: 0;
         }
@@ -158,9 +207,9 @@
 
         /* Tarjetas UI */
         .card-ui {
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: 16px;
+            background: var(--surface);
+            border: 1px solid var(--border-ui);
+            border-radius: 18px;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -2px rgba(0, 0, 0, 0.02);
         }
 
@@ -171,14 +220,33 @@
             border-radius: 10px;
             padding: 0.6rem 1.2rem;
             font-weight: 500;
-            box-shadow: 0 2px 4px rgba(25, 135, 84, 0.2);
+            box-shadow: 0 2px 6px rgba(31, 107, 79, 0.25);
         }
-        
+
         .btn-ui-primary:hover {
-            background-color: #157347;
-            border-color: #146c43;
+            background-color: var(--primary-dark);
+            border-color: var(--primary-dark);
             color: white;
         }
+
+        /* Tarjeta destacada (rellena de verde) y "cuadradito" de ícono de las métricas */
+        .card-destacada {
+            background: var(--primary-dark);
+            border-color: var(--primary-dark);
+            color: #fff;
+        }
+        .card-destacada .text-muted, .card-destacada .text-secondary { color: rgba(255, 255, 255, 0.72) !important; }
+        .icono-metrica {
+            width: 44px; height: 44px; border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.25rem; flex-shrink: 0;
+        }
+        .icono-verde { background: var(--tint); color: var(--primary-color); }
+        .icono-rojo { background: rgba(229, 72, 77, 0.12); color: #E5484D; }
+        .icono-claro { background: rgba(255, 255, 255, 0.14); color: #fff; }
+
+        /* Sin sesión iniciada (pantalla de login): sin menú lateral */
+        body.sin-sesion .main-content { margin-left: 0; }
 
         /* --- ESTADOS DE LA BARRA COLAPSADA --- */
         body.sidebar-collapsed .sidebar {
@@ -212,9 +280,9 @@
         }
 
         .collapse-btn {
-            background: #f1f5f9;
+            background: var(--bg-app);
             border: none;
-            color: #64748b;
+            color: var(--text-soft);
             border-radius: 10px;
             padding: 0.6rem;
             width: 100%;
@@ -228,22 +296,32 @@
         }
 
         .collapse-btn:hover {
-            background: #e2e8f0;
-            color: #0f172a;
+            background: var(--tint);
+            color: var(--text-main);
         }
+
+        /* Bootstrap usa blanco fijo en algunos lugares: lo adaptamos al modo oscuro */
+        [data-bs-theme="dark"] .bg-white { background-color: var(--surface) !important; }
+        [data-bs-theme="dark"] .text-dark { color: var(--text-main) !important; }
+        [data-bs-theme="dark"] .btn-light { --bs-btn-bg: var(--surface); --bs-btn-border-color: var(--border-ui); --bs-btn-hover-bg: var(--tint); }
+        [data-bs-theme="dark"] .badge.bg-light { background-color: var(--tint) !important; color: var(--text-main) !important; }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
-<body>
+<body class="{% if not user.is_authenticated %}sin-sesion{% endif %}">
 
+    {% if user.is_authenticated %}
     <!-- Menú Lateral -->
     <nav class="sidebar" id="sidebar">
         <a href="{% url 'socios:dashboard' %}" class="sidebar-brand">
             <div class="logo-icon">
-                <!-- Ícono de columnas clásicas (si preferís las iniciales, cambia la línea de abajo por: <strong style="font-size: 1rem;">SI</strong>) -->
-                <i class="bi bi-bank"></i>
+                <!-- Isotipo "A con tilde": la A de Asocia con un ✓ en lugar de la barra (cuentas claras) -->
+                <svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true">
+                    <path d="M12 54 L32 10 L52 54" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    <path d="M21 39 L29 46 L44 31" stroke="#3FB37F" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                </svg>
             </div>
-            <span>Sociedad Italiana</span>
+            <span class="brand-texto">Asocia<small>Cuentas claras</small></span>
         </a>
 
         <ul class="sidebar-menu">
@@ -293,24 +371,31 @@
             </form>
         </div>
     </nav>
+    {% endif %}
 
     <!-- Contenedor Principal -->
     <div class="main-content">
         <!-- Topbar limpia -->
+        {% if user.is_authenticated %}
         <header class="topbar">
-            <div class="d-flex align-items-center">
-                <span class="text-secondary fw-medium small">Panel de Gestión Institucional</span>
-            </div>
-            <button id="theme-toggle" class="btn btn-outline-secondary btn-sm me-2" type="button" aria-label="Cambiar tema">
-  <i class="bi bi-moon-stars"></i>
-</button>
             <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-building text-success"></i>
+                <!-- Nombre de la institución que usa el sistema: se configura en el .env -->
+                <span class="fw-semibold small">{{ institucion_nombre }}</span>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <button id="theme-toggle" class="btn btn-outline-secondary btn-sm rounded-circle" type="button" aria-label="Cambiar entre modo claro y oscuro" title="Modo claro / oscuro">
+                    <i class="bi bi-moon-stars"></i>
+                </button>
+                <div class="d-flex align-items-center gap-2">
                 <div class="user-avatar">
                     <i class="bi bi-person-fill"></i>
                 </div>
                 <span class="fw-semibold small text-dark">{{ request.user.username|title }}</span>
+                </div>
             </div>
         </header>
+        {% endif %}
 
         <!-- Cuerpo Dinámico -->
         <main class="content-body">
@@ -338,7 +423,8 @@
             body.classList.add('sidebar-collapsed');
         }
 
-        sidebarToggle.addEventListener('click', () => {
+        // En la pantalla de login no hay menú lateral (ni botón para colapsarlo)
+        if (sidebarToggle) sidebarToggle.addEventListener('click', () => {
             body.classList.toggle('sidebar-collapsed');
             if (body.classList.contains('sidebar-collapsed')) {
                 localStorage.setItem('sidebarState', 'collapsed');
@@ -346,6 +432,23 @@
                 localStorage.setItem('sidebarState', 'expanded');
             }
         });
+    </script>
+    <script>
+        // Botón de modo claro/oscuro: cambia el atributo que lee Bootstrap y lo recuerda
+        const botonTema = document.getElementById('theme-toggle');
+        function pintarIconoTema() {
+            const oscuro = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+            botonTema.innerHTML = oscuro ? '<i class="bi bi-sun"></i>' : '<i class="bi bi-moon-stars"></i>';
+        }
+        if (botonTema) {
+            pintarIconoTema();
+            botonTema.addEventListener('click', () => {
+                const nuevo = document.documentElement.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark';
+                document.documentElement.setAttribute('data-bs-theme', nuevo);
+                localStorage.setItem('tema', nuevo);
+                pintarIconoTema();
+            });
+        }
     </script>
     {% block extra_js %}{% endblock %}
     <script>
