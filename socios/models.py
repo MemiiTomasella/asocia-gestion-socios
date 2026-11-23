@@ -1,4 +1,5 @@
 """Modelos de datos: Categoria, Socio, Cuota y Pago."""
+from datetime import timedelta
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
@@ -154,6 +155,15 @@ class Cuota(models.Model):
     def saldo(self):
         return self.monto - self.total_pagado
 
+    @property
+    def es_parcial(self):
+        """Pagada en partes: tiene pagos, pero todavía no cubren el monto total.
+
+        No se guarda como estado en la base: se deduce de los pagos, así nunca
+        puede quedar desactualizado (es un dato derivado).
+        """
+        return self.estado == self.Estado.PENDIENTE and self.total_pagado > 0
+
     def actualizar_estado(self):
         """Marca la cuota como pagada si los pagos cubren el monto; si no, pendiente."""
         total = self.pagos.aggregate(t=Sum("monto_pagado"))["t"] or Decimal("0")
@@ -229,14 +239,15 @@ def sincronizar_estado_cuota(sender, instance, **kwargs):
         
 @receiver(post_save, sender=Socio)
 def crear_cuota_inicial_socio(sender, instance, created, **kwargs):
-    """Crea automáticamente la cuota del mes actual cuando se da de alta un socio."""
-    if created:
+    """Crea automáticamente la cuota del mes actual cuando se da de alta un socio activo."""
+    if created and instance.estado == Socio.Estado.ACTIVO:
         hoy = timezone.localdate()
-        # Calculamos una fecha de vencimiento (por ejemplo, el 10 del mes actual)
-        try:
+        # Vence el día 10 del mes. Si el socio se asocia después del 10,
+        # se le dan 10 días para pagar (si no, nacería ya moroso).
+        if hoy.day <= 10:
             vencimiento = hoy.replace(day=10)
-        except ValueError:
-            vencimiento = hoy
+        else:
+            vencimiento = hoy + timedelta(days=10)
 
         Cuota.objects.get_or_create(
             socio=instance,

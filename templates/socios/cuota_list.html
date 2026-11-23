@@ -28,6 +28,7 @@
       <select id="estado" name="estado" class="form-select" data-autosubmit>
         <option value="">Todas</option>
         <option value="PENDIENTE" {% if estado == 'PENDIENTE' %}selected{% endif %}>Pendientes</option>
+        <option value="PARCIAL" {% if estado == 'PARCIAL' %}selected{% endif %}>Parciales</option>
         <option value="VENCIDA" {% if estado == 'VENCIDA' %}selected{% endif %}>Vencidas</option>
         <option value="PAGADA" {% if estado == 'PAGADA' %}selected{% endif %}>Pagadas</option>
       </select>
@@ -71,15 +72,16 @@
           </td>
           <td>{{ c.periodo }}</td>
           <td>{{ c.fecha_vencimiento|date:"d/m/Y" }}</td>
-          <td class="text-end">${{ c.monto|floatformat:2 }}</td>
+          <td class="text-end">
+            ${{ c.monto|floatformat:"2g" }}
+            {% if c.es_parcial %}<div class="small text-muted">Pagó ${{ c.total_pagado|floatformat:"2g" }} · Debe ${{ c.saldo|floatformat:"2g" }}</div>{% endif %}
+          </td>
           <td>
-            {% if c.estado == 'PAGADA' %}<span class="badge text-bg-success">Pagada</span>
-            {% elif c.esta_vencida %}<span class="badge text-bg-danger">Vencida</span>
-            {% else %}<span class="badge text-bg-warning">Pendiente</span>{% endif %}
+            {% include "includes/estado_cuota.html" with c=c %}
           </td>
           <td class="text-end">
             {% if c.estado != 'PAGADA' %}
-            <a href="{% url 'socios:pago_registrar' c.pk %}" class="btn btn-sm btn-success"><i class="bi bi-cash"></i> Cobrar</a>
+            <a href="{% url 'socios:pago_registrar' c.pk %}" class="btn btn-sm btn-success"><i class="bi bi-cash"></i> {% if c.es_parcial %}Cobrar saldo{% else %}Cobrar{% endif %}</a>
             {% endif %}
           </td>
         </tr>

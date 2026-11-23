@@ -209,7 +209,9 @@ class CuotaListView(LoginRequiredMixin, QuerystringMixin, ListView):
     paginate_by = 15
 
     def get_queryset(self):
-        qs = Cuota.objects.select_related("socio")
+        # prefetch_related trae todos los pagos en una sola consulta extra,
+        # en vez de una consulta por cada cuota al calcular lo pagado y el saldo.
+        qs = Cuota.objects.select_related("socio").prefetch_related("pagos")
         params = self.request.GET
         q = params.get("q", "").strip()
         estado = params.get("estado", "")
@@ -227,6 +229,9 @@ class CuotaListView(LoginRequiredMixin, QuerystringMixin, ListView):
             qs = qs.filter(estado=Cuota.Estado.PAGADA)
         elif estado == "PENDIENTE":
             qs = qs.filter(estado=Cuota.Estado.PENDIENTE)
+        elif estado == "PARCIAL":
+            # Pendiente pero con al menos un pago: se pagó una parte
+            qs = qs.filter(estado=Cuota.Estado.PENDIENTE, pagos__isnull=False).distinct()
         elif estado == "VENCIDA":
             qs = qs.filter(
                 estado=Cuota.Estado.PENDIENTE, fecha_vencimiento__lt=timezone.localdate()
@@ -342,16 +347,25 @@ def pago_registrar(request, cuota_pk):
         if form.is_valid():
             with transaction.atomic():
                 pago = form.save()
-            messages.success(
-                request,
-                f"Se registró el pago de ${pago.monto_pagado} de {cuota.socio.nombre_completo} "
-                f"({cuota.periodo}).",
-            )
+            saldo = cuota.saldo
+            if saldo > 0:
+                messages.success(
+                    request,
+                    f"Se registró un pago parcial de ${pago.monto_pagado} de "
+                    f"{cuota.socio.nombre_completo} ({cuota.periodo}). Queda un saldo de ${saldo}.",
+                )
+            else:
+                messages.success(
+                    request,
+                    f"Se registró el pago de ${pago.monto_pagado} de {cuota.socio.nombre_completo} "
+                    f"({cuota.periodo}). La cuota quedó saldada.",
+                )
             return redirect("socios:cuota_list")
     else:
         form = PagoForm(instance=pago, initial={"monto_pagado": cuota.saldo})
 
-    return render(request, "socios/pago_form.html", {"form": form, "cuota": cuota})
+    contexto = {"form": form, "cuota": cuota, "pagos_previos": cuota.pagos.all()}
+    return render(request, "socios/pago_form.html", contexto)
 
 
 class PagoListView(LoginRequiredMixin, QuerystringMixin, ListView):

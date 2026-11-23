@@ -24,10 +24,11 @@ class ModelosTests(TestCase):
     def setUp(self):
         self.socio = crear_socio()
         self.hoy = timezone.localdate()
-        self.cuota = Cuota.objects.create(
-            socio=self.socio, mes=self.hoy.month, anio=self.hoy.year,
-            monto=Decimal("5000"), fecha_vencimiento=self.hoy + timedelta(days=5),
-        )
+        # Al dar de alta un socio activo, el sistema le crea sola la cuota del mes actual
+        self.cuota = self.socio.cuotas.get(mes=self.hoy.month, anio=self.hoy.year)
+        self.cuota.monto = Decimal("5000")
+        self.cuota.fecha_vencimiento = self.hoy + timedelta(days=5)
+        self.cuota.save()
 
     def test_pago_parcial_mantiene_pendiente_y_total_la_marca_pagada(self):
         Pago.objects.create(cuota=self.cuota, monto_pagado=Decimal("2000"))
@@ -54,6 +55,27 @@ class ModelosTests(TestCase):
         )
         with self.assertRaises(Exception):
             duplicada.full_clean()
+
+    def test_cuota_pagada_en_partes_se_marca_como_parcial(self):
+        self.assertFalse(self.cuota.es_parcial)  # sin pagos: pendiente, no parcial
+        Pago.objects.create(cuota=self.cuota, monto_pagado=Decimal("2000"))
+        self.cuota.refresh_from_db()
+        self.assertTrue(self.cuota.es_parcial)  # pagó una parte
+        Pago.objects.create(cuota=self.cuota, monto_pagado=Decimal("3000"))
+        self.cuota.refresh_from_db()
+        self.assertFalse(self.cuota.es_parcial)  # completó: ya es PAGADA
+        self.assertEqual(self.cuota.estado, Cuota.Estado.PAGADA)
+
+    def test_alta_de_socio_crea_la_cuota_del_mes_sin_nacer_moroso(self):
+        socio = crear_socio(dni="27666777", apellido="Conti")
+        cuota = socio.cuotas.get()
+        self.assertEqual((cuota.mes, cuota.anio), (self.hoy.month, self.hoy.year))
+        self.assertGreaterEqual(cuota.fecha_vencimiento, self.hoy)
+        self.assertFalse(cuota.esta_vencida)
+
+    def test_socio_dado_de_alta_inactivo_no_genera_cuota(self):
+        socio = crear_socio(dni="27666888", estado=Socio.Estado.INACTIVO)
+        self.assertFalse(socio.cuotas.exists())
 
     def test_cuota_vencida(self):
         self.cuota.fecha_vencimiento = self.hoy - timedelta(days=1)
@@ -140,11 +162,12 @@ class VistasTests(TestCase):
         crear_socio(dni="25444555", apellido="Ferrari", categoria=self.categoria,
                     estado=Socio.Estado.INACTIVO)
         datos = {"mes": 3, "anio": 2026, "fecha_vencimiento": "2026-03-10"}
+        marzo = Cuota.objects.filter(mes=3, anio=2026)
         self.client.post(reverse("socios:cuotas_generar"), datos)
-        self.assertEqual(Cuota.objects.count(), 1)
-        self.assertEqual(Cuota.objects.first().monto, Decimal("5000"))
+        self.assertEqual(marzo.count(), 1)  # solo el socio activo
+        self.assertEqual(marzo.first().monto, Decimal("5000"))
         self.client.post(reverse("socios:cuotas_generar"), datos)
-        self.assertEqual(Cuota.objects.count(), 1)
+        self.assertEqual(marzo.count(), 1)  # no se duplica
 
     def test_cuota_sin_monto_usa_el_de_la_categoria(self):
         socio = crear_socio(categoria=self.categoria)
@@ -152,7 +175,7 @@ class VistasTests(TestCase):
             "socio": socio.pk, "mes": 4, "anio": 2026, "monto": "", "fecha_vencimiento": "2026-04-10",
         })
         self.assertRedirects(resp, reverse("socios:cuota_list"))
-        self.assertEqual(Cuota.objects.get().monto, Decimal("5000"))
+        self.assertEqual(Cuota.objects.get(mes=4, anio=2026).monto, Decimal("5000"))
 
     def test_cobro_de_cuota_y_validacion_de_monto(self):
         socio = crear_socio(categoria=self.categoria)
@@ -178,6 +201,28 @@ class VistasTests(TestCase):
         self.assertRedirects(resp, reverse("socios:cuota_list"))
         cuota.refresh_from_db()
         self.assertEqual(cuota.estado, Cuota.Estado.PAGADA)
+
+    def test_cobro_parcial_y_filtro_de_parciales(self):
+        socio = crear_socio(categoria=self.categoria)
+        cuota = Cuota.objects.create(
+            socio=socio, mes=1, anio=2026, monto=Decimal("5000"), fecha_vencimiento="2026-01-10"
+        )
+        url = reverse("socios:pago_registrar", args=[cuota.pk])
+        resp = self.client.post(url, {
+            "fecha_pago": timezone.localdate().isoformat(),
+            "monto_pagado": "2000", "metodo_pago": "EFECTIVO",
+        }, follow=True)
+        self.assertContains(resp, "pago parcial")
+        self.assertContains(resp, "Queda un saldo de $3000")
+
+        listado = self.client.get(reverse("socios:cuota_list"), {"estado": "PARCIAL"})
+        self.assertEqual([c.pk for c in listado.context["cuotas"]], [cuota.pk])
+        self.assertContains(listado, "Cobrar saldo")
+
+        # El formulario muestra el pago anterior y propone el saldo restante
+        form = self.client.get(url)
+        self.assertContains(form, "Pagos anteriores")
+        self.assertEqual(form.context["form"].initial["monto_pagado"], Decimal("3000"))
 
     def test_dashboard_cuenta_morosos_y_al_dia(self):
         moroso = crear_socio(dni="30111222", categoria=self.categoria)

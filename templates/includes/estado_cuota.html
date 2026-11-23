@@ -1,0 +1,8 @@
+{% comment %}
+Estado de una cuota como "semáforo". Uso: {% include "includes/estado_cuota.html" with c=cuota %}
+Verde = pagada · Ámbar = pagada en partes · Rojo = vencida · Gris = pendiente sin pagos.
+{% endcomment %}
+{% if c.estado == 'PAGADA' %}<span class="badge text-bg-success">Pagada</span>
+{% elif c.es_parcial %}<span class="badge text-bg-warning">Parcial</span>{% if c.esta_vencida %} <span class="badge text-bg-danger">Vencida</span>{% endif %}
+{% elif c.esta_vencida %}<span class="badge text-bg-danger">Vencida</span>
+{% else %}<span class="badge text-bg-secondary">Pendiente</span>{% endif %}
