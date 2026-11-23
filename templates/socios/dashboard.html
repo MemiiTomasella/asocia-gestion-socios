@@ -75,12 +75,12 @@
                     <tbody>
                         {% for socio in top_morosos %}
                         <tr>
-                           <td class="fw-medium text-dark">{{ socio.nombre_completo }}</td>
-                           <td><span class="badge bg-light text-secondary border">{{ socio.categoria.nombre }}</span></td>
-                           <td class="text-end"><span class="badge bg-danger-subtle text-danger px-2 py-1 rounded-pill">{{ socio.cuotas_vencidas }} vencida{{ socio.cuotas_vencidas|pluralize }}</span></td>
+                            <td class="fw-medium text-dark">{{ socio.nombre_completo }}</td>
+                            <td><span class="badge bg-light text-secondary border">{{ socio.categoria.nombre }}</span></td>
+                            <td class="text-end"><span class="badge bg-danger-subtle text-danger px-2 py-1 rounded-pill">{{ socio.cuotas_vencidas }} vencida{{ socio.cuotas_vencidas|pluralize }}</span></td>
                         </tr>
                         {% empty %}
-<tr><td colspan="3" class="text-center text-muted small py-3">No hay socios con cuotas vencidas.</td></tr>
+                        <tr><td colspan="3" class="text-center text-muted small py-3">No hay socios con cuotas vencidas.</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -111,8 +111,8 @@
                             <td class="fw-bold text-success text-end">${{ pago.monto_pagado|floatformat:"2g" }}</td>
                         </tr>
                         {% empty %}
-    <tr><td colspan="4" class="text-center text-muted small py-3">Todavía no hay pagos registrados.</td></tr>
-    {% endfor %}
+                        <tr><td colspan="4" class="text-center text-muted small py-3">Todavía no hay pagos registrados.</td></tr>
+                        {% endfor %}
                     </tbody>
                 </table>
             </div>
